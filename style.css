@@ -179,6 +179,8 @@ body {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .panel-body { padding: 16px 18px; overflow-y: auto; flex: 1; }
@@ -384,6 +386,7 @@ body {
 .output-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .output-tabs {
