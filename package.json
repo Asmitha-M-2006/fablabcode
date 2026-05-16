@@ -1,0 +1,17 @@
+{
+  "name": "fablabcode",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FAB-LabCode with a built-in Node backend for AI and G-code APIs.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  }
+}

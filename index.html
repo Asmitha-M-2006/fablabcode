@@ -38,6 +38,12 @@
           G-code Mode
         </button>
       </div>
+      <div class="auth-controls">
+        <span class="auth-user-chip" id="auth-user-chip" style="display:none;"></span>
+        <button class="btn-ghost btn-sm" id="auth-login-btn" onclick="openAuthModal('login')">Log in</button>
+        <button class="btn-ghost btn-sm" id="auth-signup-btn" onclick="openAuthModal('signup')">Sign up</button>
+        <button class="btn-ghost btn-sm" id="auth-logout-btn" style="display:none;" onclick="logout()">Log out</button>
+      </div>
     </div>
   </nav>
 
@@ -123,7 +129,7 @@
                 onkeydown="handleChatKey(event)"
                 oninput="autoResize(this)"
               ></textarea>
-              <button class="send-btn" onclick="sendMessage()">
+              <button class="send-btn" id="chat-send-btn" onclick="sendMessage()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                 </svg>
@@ -187,8 +193,8 @@
                   <span class="dot dot-yellow"></span>
                   <span class="dot dot-green"></span>
                 </div>
-                <span class="editor-filename">calculator.js</span>
-                <span class="editor-lang">JavaScript</span>
+                <span class="editor-filename" id="ai-editor-filename">calculator.js</span>
+                <span class="editor-lang" id="ai-editor-language-label">JavaScript</span>
               </div>
               <div class="code-block" id="code-output">
 <pre><code><span class="code-comment">// FAB-LabCode Generated: Calculator App</span>
@@ -256,19 +262,19 @@
             <div class="output-meta">
               <div class="meta-card">
                 <span class="meta-label">Lines</span>
-                <span class="meta-value">52</span>
+                <span class="meta-value" id="ai-lines">52</span>
               </div>
               <div class="meta-card">
                 <span class="meta-label">Language</span>
-                <span class="meta-value">JavaScript</span>
+                <span class="meta-value" id="ai-language">JavaScript</span>
               </div>
               <div class="meta-card">
                 <span class="meta-label">Complexity</span>
-                <span class="meta-value complexity-low">Low</span>
+                <span class="meta-value complexity-low" id="ai-complexity">Low</span>
               </div>
               <div class="meta-card">
                 <span class="meta-label">Status</span>
-                <span class="meta-value status-ok">
+                <span class="meta-value status-ok" id="ai-output-status">
                   <span class="status-dot"></span> Ready
                 </span>
               </div>
@@ -281,7 +287,7 @@
                 </svg>
                 Tips &amp; Best Practices
               </div>
-              <ul class="tips-list">
+              <ul class="tips-list" id="ai-tips">
                 <li>Use <code>parseFloat()</code> for decimal input safety</li>
                 <li>Bind keyboard events globally via <code>document</code></li>
                 <li>Guard against division by zero explicitly</li>
@@ -292,7 +298,7 @@
 
           <!-- Explanation Tab -->
           <div class="tab-content" id="tab-explanation">
-            <div class="explanation-content">
+            <div class="explanation-content" id="ai-explanation-body">
               <div class="explanation-card">
                 <h3 class="expl-title">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -307,10 +313,10 @@
                   </svg>
                   How it works
                 </h3>
-                <p>This Calculator class encapsulates all state and logic using ES6 class syntax. The core pattern is a simple state machine with three variables: <code>current</code> (active input), <code>prev</code> (left operand), and <code>operator</code> (pending operation).</p>
+                <p id="ai-explanation-text">This Calculator class encapsulates all state and logic using ES6 class syntax. The core pattern is a simple state machine with three variables: <code>current</code> (active input), <code>prev</code> (left operand), and <code>operator</code> (pending operation).</p>
               </div>
 
-              <div class="step-list">
+              <div class="step-list" id="ai-step-list">
                 <div class="step-item">
                   <div class="step-num">1</div>
                   <div class="step-body">
@@ -340,19 +346,19 @@
               <div class="complexity-grid">
                 <div class="complexity-item">
                   <span class="citem-label">Time Complexity</span>
-                  <span class="citem-value badge-green">O(1)</span>
+                  <span class="citem-value badge-green" id="ai-time-complexity">O(1)</span>
                 </div>
                 <div class="complexity-item">
                   <span class="citem-label">Space Complexity</span>
-                  <span class="citem-value badge-green">O(1)</span>
+                  <span class="citem-value badge-green" id="ai-space-complexity">O(1)</span>
                 </div>
                 <div class="complexity-item">
                   <span class="citem-label">Pattern</span>
-                  <span class="citem-value badge-blue">State Machine</span>
+                  <span class="citem-value badge-blue" id="ai-pattern">State Machine</span>
                 </div>
                 <div class="complexity-item">
                   <span class="citem-label">Paradigm</span>
-                  <span class="citem-value badge-purple">OOP / ES6</span>
+                  <span class="citem-value badge-purple" id="ai-paradigm">OOP / ES6</span>
                 </div>
               </div>
             </div>
@@ -360,7 +366,7 @@
 
           <!-- Preview Tab -->
           <div class="tab-content" id="tab-preview">
-            <div class="preview-wrapper">
+            <div class="preview-wrapper" id="ai-preview-body">
               <div class="preview-label">Live Preview</div>
               <div class="calculator-preview">
                 <div class="calc-screen">
@@ -483,7 +489,7 @@
               </div>
             </div>
 
-            <button class="btn-generate" onclick="generateGcode()">
+            <button class="btn-generate" id="generate-gcode-btn" onclick="generateGcode()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
@@ -690,6 +696,44 @@
     </section>
 
   </main>
+
+  <div class="auth-modal-backdrop" id="auth-modal-backdrop" style="display:none;" onclick="closeAuthModal(event)">
+    <div class="auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="auth-modal-header">
+        <div>
+          <div class="auth-modal-kicker">Account</div>
+          <h2 class="auth-modal-title" id="auth-modal-title">Log in to FAB-LabCode</h2>
+        </div>
+        <button class="auth-close-btn" type="button" onclick="closeAuthModal()">&times;</button>
+      </div>
+
+      <div class="auth-mode-toggle">
+        <button class="auth-mode-btn active" id="auth-tab-login" type="button" onclick="setAuthMode('login')">Log in</button>
+        <button class="auth-mode-btn" id="auth-tab-signup" type="button" onclick="setAuthMode('signup')">Sign up</button>
+      </div>
+
+      <form class="auth-form" id="auth-form" onsubmit="submitAuthForm(event)">
+        <div class="auth-field" id="auth-name-field" style="display:none;">
+          <label class="auth-label" for="auth-name">Full name</label>
+          <input class="auth-input" id="auth-name" type="text" placeholder="Atul Kumar" autocomplete="name" />
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="auth-email">Email</label>
+          <input class="auth-input" id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="auth-password">Password</label>
+          <input class="auth-input" id="auth-password" type="password" placeholder="Minimum 8 characters" autocomplete="current-password" required />
+        </div>
+
+        <p class="auth-error" id="auth-error"></p>
+
+        <button class="btn-generate auth-submit-btn" id="auth-submit-btn" type="submit">Log in</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Toast Notification -->
   <div class="toast" id="toast"></div>

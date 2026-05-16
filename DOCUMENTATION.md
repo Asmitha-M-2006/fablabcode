@@ -2,13 +2,82 @@
 
 ## File Structure
 
-```
+```text
 fablabcode/
 ├── index.html        # Application shell + all markup
 ├── style.css         # All styles (CSS custom properties, Flexbox/Grid layouts)
-├── script.js         # All interactivity (mode switch, G-code engine, canvas, chat)
+├── script.js         # Frontend interactions + rendering
+├── package.json      # Local run/test scripts
+├── server.js         # Node HTTP entrypoint
+├── server/lib/
+│   ├── ai-assistant.js   # Structured AI sandbox responses
+│   ├── gcode-service.js  # Server-side G-code parsing and generation
+│   └── http.js           # JSON/static response helpers
+├── server/tests/
+│   └── integration.test.js
 ├── CONTEXT.md        # Product context and rationale
 └── DOCUMENTATION.md  # This file — technical reference
+```
+
+---
+
+## Backend
+
+### Runtime
+
+- Node.js built-in HTTP server
+- No third-party dependencies
+- Serves the static frontend and API routes from the same process
+
+### API Routes
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | Health/status check |
+| `POST` | `/api/chat` | Returns structured AI sandbox output |
+| `POST` | `/api/gcode/generate` | Parses instruction and returns generated G-code |
+
+### Response Shape — `/api/chat`
+
+```json
+{
+  "reply": "Assistant bubble text",
+  "output": {
+    "filename": "calculator.js",
+    "language": "JavaScript",
+    "code": "class Calculator { ... }",
+    "explanation": "...",
+    "steps": ["...", "..."],
+    "tips": ["...", "..."],
+    "complexity": {
+      "level": "Low",
+      "time": "O(1)",
+      "space": "O(1)",
+      "pattern": "State Machine",
+      "paradigm": "OOP / ES6"
+    },
+    "preview": {
+      "kind": "calculator"
+    }
+  }
+}
+```
+
+### Response Shape — `/api/gcode/generate`
+
+```json
+{
+  "code": ["G21", "G90", "..."],
+  "explanation": "This G-code draws...",
+  "steps": ["...", "..."],
+  "summary": {
+    "time": "< 1 min",
+    "length": "40 mm",
+    "moves": 8,
+    "bounds": "X: 0–10 / Y: 0–10"
+  },
+  "shape": "square"
+}
 ```
 
 ---
@@ -116,7 +185,7 @@ Animates a pill notification from bottom-center. Auto-dismisses after `duration`
 
 | Function | Description |
 |---|---|
-| `sendMessage()` | Reads textarea, appends user bubble, triggers AI response after delay |
+| `sendMessage()` | Reads textarea, posts to `/api/chat`, appends the backend reply |
 | `appendBubble(text, type)` | Creates and appends a `.chat-bubble` element |
 | `showTyping()` | Adds animated dots bubble, returns element ID |
 | `removeTyping(id)` | Removes the typing indicator |
@@ -124,8 +193,6 @@ Animates a pill notification from bottom-center. Auto-dismisses after `duration`
 | `handleChatKey(e)` | Sends on Enter (not Shift+Enter) |
 | `autoResize(el)` | Grows textarea up to 120px |
 | `usePrompt(text)` | Fills textarea from suggestion chips |
-
-AI responses cycle through `aiResponses[]` — static demo array.
 
 #### Output Tabs
 
@@ -149,13 +216,14 @@ Implements a simple two-operand calculator using an ops lookup object. Guards di
 
 #### `generateGcode()`
 
-1. Reads instruction text and regex-matches against known shapes
-2. Calls the matching template function from `gcodeTemplates`
+1. Reads the instruction/settings from the UI
+2. Posts them to `/api/gcode/generate`
 3. Calls `renderGcodeEditor()`, `updateSummary()`, `updateExplanation()`, `drawToolpath()`, `drawCoordDiagram()`
 
-#### `gcodeTemplates`
+#### Server-side templates
 
-Each template is a function returning a data object:
+Templates now live in [server/lib/gcode-service.js](/Users/atulenv/Desktop/Projects/waproject/fablabcode/server/lib/gcode-service.js).
+Each template returns a data object shaped like:
 
 ```js
 {
@@ -177,7 +245,7 @@ Each template is a function returning a data object:
 | `triangle` | `/triangle (\d+)/` | `triangle 15` |
 | `line` | `/line from (x,y) to (x,y)/` | `line from (0,0) to (20,0)` |
 
-Unrecognised input falls back to a 10mm square.
+Unrecognised input falls back to a 10mm square on the server.
 
 #### `renderGcodeEditor(lines)`
 
@@ -238,7 +306,7 @@ Animates a red dot along the toolpath waypoints using `requestAnimationFrame`. E
 
 ## Adding a New Shape
 
-1. Add a new template to `gcodeTemplates`:
+1. Add a new template in [server/lib/gcode-service.js](/Users/atulenv/Desktop/Projects/waproject/fablabcode/server/lib/gcode-service.js):
 ```js
 myShape: (params, feed, safeZ, units) => ({
   code: [ /* lines */ ],
@@ -250,10 +318,10 @@ myShape: (params, feed, safeZ, units) => ({
 })
 ```
 
-2. Add a regex branch in `generateGcode()`:
+2. Add a regex branch inside the server-side `generateGcode()` matcher:
 ```js
 else if (/mypattern/.test(raw)) {
-  data = gcodeTemplates.myShape(...);
+  data = myShape(...);
 }
 ```
 

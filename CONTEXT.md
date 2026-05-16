@@ -41,22 +41,23 @@ Simultaneously, the AI Sandbox provides a general-purpose coding assistant exper
 | Canvas API | Toolpath rendering with arrows, grid lines, and animations |
 | CSS Custom Properties | Consistent theming across all components |
 | JetBrains Mono + Inter | Professional dev-tool typography |
-| No backend | All logic is static — can be served from any static host |
+| Node.js HTTP backend | Serves the app locally and exposes chat/G-code APIs without extra dependencies |
 
 ---
 
-## Current Scope (v1.0)
+## Current Scope (v1.1)
 
-- Static/demo UI only — no real AI or CNC machine connection
-- G-code is generated from pattern-matching on user input
-- Canvas toolpath is drawn procedurally from parsed shape data
-- Calculator preview in AI Sandbox is fully functional (real JS calculator)
+- Local backend serves the frontend and exposes `/api/chat` and `/api/gcode/generate`
+- G-code generation now runs on the server and returns structured data to the browser
+- Canvas toolpath rendering remains client-side for fast visual feedback
+- AI Sandbox responses are returned from the backend as structured code/explanation/preview payloads
+- Calculator preview in AI Sandbox remains fully functional in the browser
 
 ---
 
 ## Planned Enhancements (future)
 
-- Real AI API integration (Claude/OpenAI) for chat and G-code generation
+- Real AI provider integration for chat and G-code generation
 - 3D toolpath visualisation (Three.js)
 - Export to multiple formats (.nc, .gcode, .svg)
 - CNC machine connection via Web Serial API
