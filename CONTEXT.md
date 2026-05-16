@@ -1,65 +1,89 @@
 # FAB-LabCode — Project Context
 
-## What is FAB-LabCode?
+## Product Direction
 
-FAB-LabCode is a browser-based developer tool dashboard designed for **fabrication labs and CNC workflows**. It combines an AI coding assistant with a G-code generator in a single, unified interface — think VS Code + ChatGPT + CNC dashboard, all in a light theme with purple/blue accents.
+FAB-LabCode is a browser-based workspace for two adjacent jobs:
 
-The application has **two modes**:
+1. AI-assisted software prototyping in an interactive sandbox
+2. Natural-language to G-code generation for fabrication workflows
 
-| Mode | Purpose |
-|---|---|
-| AI Sandbox | Chat-driven code generation with live preview and explanation |
-| G-code Mode | Natural-language to G-code conversion with toolpath visualisation |
+The app is deliberately lightweight: plain HTML, CSS, and JavaScript on the frontend, with a small Node.js backend that serves the UI, handles auth, stores chat history, and returns structured AI/G-code responses.
 
----
+## Core Experience
 
-## Why this project?
+### AI Sandbox
 
-Modern fabrication labs often require operators to write G-code manually, which is error-prone and inaccessible to beginners. FAB-LabCode bridges that gap by letting users describe what they want to cut/draw/engrave in plain English and immediately see:
-1. The generated G-code
-2. A 2D visual toolpath preview on a canvas
-3. A step-by-step explanation of each command
+The AI Sandbox is no longer just a chat box with a hardcoded mock preview. The backend now returns a single stored artifact that contains:
 
-Simultaneously, the AI Sandbox provides a general-purpose coding assistant experience — useful for lab technicians and developers who want quick code snippets without leaving the tool.
+- runnable preview source
+- code files
+- explanation text
+- ordered implementation steps
+- best-practice notes
+- a compact complexity summary
 
----
+The frontend renders that artifact into one workspace so the user can inspect the live preview, explanation, and source code at the same time.
+
+### G-code Mode
+
+The G-code tool converts plain-English fabrication prompts into structured G-code output with:
+
+- generated command lines
+- a client-rendered toolpath preview
+- bounds, move count, and path-length summary
+- a human-readable explanation of the generated sequence
+
+## Runtime Modes
+
+### Real AI Mode
+
+If a real provider key is configured, `/api/chat` uses that provider and asks it to return a strict JSON artifact schema that matches the frontend renderer.
+
+### Fallback Mode
+
+If no supported provider key is configured, the backend still works with curated sandbox artifacts for common requests such as calculators and todo apps. This keeps the full UI flow testable without external dependencies.
+
+### Supported Providers
+
+- Gemini via `GEMINI_API_KEY`
+- OpenAI via `OPENAI_API_KEY`
+
+If both are configured, the backend defaults to OpenAI unless `AI_PROVIDER=gemini` is set explicitly.
+
+### Storage Modes
+
+- `DATABASE_URL` set: users, sessions, and chat history persist in PostgreSQL
+- `DATABASE_URL` missing: the app falls back to in-memory storage for local development and tests
 
 ## Audience
 
-- Fabrication lab students and technicians
-- Hobbyist CNC/laser-cutter/pen-plotter users
-- Developers who want a lightweight AI code assistant
-- Educators demonstrating G-code to students
+- fabrication lab students and technicians
+- CNC / laser / plotting hobbyists
+- developers who want a small, local-first AI coding surface
+- educators demonstrating both browser code and G-code generation in one tool
 
----
+## Current Scope
 
-## Technology Choices
+### Implemented
 
-| Choice | Reason |
-|---|---|
-| Vanilla HTML/CSS/JS | Zero dependencies — runs in any browser, no build step |
-| Canvas API | Toolpath rendering with arrows, grid lines, and animations |
-| CSS Custom Properties | Consistent theming across all components |
-| JetBrains Mono + Inter | Professional dev-tool typography |
-| Node.js HTTP backend | Serves the app locally and exposes chat/G-code APIs without extra dependencies |
+- local Node server plus Vercel-compatible API handlers
+- signup, login, logout, and bearer-token auth
+- per-user chat history storage
+- backend-driven AI artifact schema with files + live preview payloads
+- simultaneous preview/code/explanation rendering in the sandbox UI
+- server-side G-code generation with client-side visualization
+- integration tests covering health, auth, chat persistence, and G-code generation
 
----
+### Still Needed For Production-Grade Usage
 
-## Current Scope (v1.1)
+- a real provider key such as `GEMINI_API_KEY` or `OPENAI_API_KEY` for non-template AI output
+- a real `DATABASE_URL` for persistent multi-session storage
+- a non-default `SESSION_SECRET`
+- broader prompt coverage for more UI/app archetypes if you want the fallback mode to behave like a wider real-AI demo
 
-- Local backend serves the frontend and exposes `/api/chat` and `/api/gcode/generate`
-- G-code generation now runs on the server and returns structured data to the browser
-- Canvas toolpath rendering remains client-side for fast visual feedback
-- AI Sandbox responses are returned from the backend as structured code/explanation/preview payloads
-- Calculator preview in AI Sandbox remains fully functional in the browser
+## Near-Term Priorities
 
----
-
-## Planned Enhancements (future)
-
-- Real AI provider integration for chat and G-code generation
-- 3D toolpath visualisation (Three.js)
-- Export to multiple formats (.nc, .gcode, .svg)
-- CNC machine connection via Web Serial API
-- Save/load sessions with localStorage
-- Dark mode toggle
+- expand live-preview capable artifact types beyond calculator/todo templates
+- add richer file handling in the sandbox if generated artifacts grow beyond a few files
+- improve G-code template coverage and machine-specific export paths
+- add deployment notes for hosted environments using the existing Vercel-compatible handlers

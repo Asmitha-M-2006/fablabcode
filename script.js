@@ -12,6 +12,8 @@ let toastTimer = null;
 let currentGcodeData = null;
 let currentAiOutput = null;
 let defaultAiOutput = null;
+let currentAiFiles = [];
+let currentAiFileIndex = 0;
 let chatHistory = [];
 let calcState = { current: '', prev: null, op: null, justEvaluated: false };
 let authMode = 'login';
@@ -433,6 +435,7 @@ async function clearChat() {
   try {
     await deleteJson('/chat/history', { auth: true });
     renderEmptyAuthenticatedChatState();
+    renderAiOutput(defaultAiOutput);
     showToast('Chat history cleared');
   } catch (error) {
     showToast(error.message);
@@ -466,13 +469,47 @@ function setChatBusy(isBusy) {
 }
 
 /* ================================================
-   AI SANDBOX — OUTPUT TABS
+   AI SANDBOX — OUTPUT RENDERER
 ================================================ */
-function switchTab(tabName, btn) {
-  document.querySelectorAll('.tab-btn').forEach((tab) => tab.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach((content) => content.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(`tab-${tabName}`).classList.add('active');
+function switchTab() {
+  // Legacy no-op. The sandbox now renders code, explanation, and preview together.
+}
+
+function normalizeAiFiles(output = {}) {
+  const files = Array.isArray(output.files)
+    ? output.files
+      .map((file) => ({
+        filename: String(file?.filename || '').trim() || 'snippet.txt',
+        language: String(file?.language || '').trim() || inferLanguageFromFilename(file?.filename),
+        content: String(file?.content || '').trim(),
+        primary: file?.primary === true,
+      }))
+      .filter((file) => file.content)
+    : [];
+
+  if (files.length > 0) {
+    if (!files.some((file) => file.primary)) {
+      files[0].primary = true;
+    }
+    return files;
+  }
+
+  return [{
+    filename: String(output.filename || 'snippet.txt').trim() || 'snippet.txt',
+    language: String(output.language || inferLanguageFromFilename(output.filename)).trim() || 'Text',
+    content: String(output.code || '').trim(),
+    primary: true,
+  }];
+}
+
+function inferLanguageFromFilename(filename) {
+  const lower = String(filename || '').toLowerCase();
+
+  if (lower.endsWith('.html')) return 'HTML';
+  if (lower.endsWith('.css')) return 'CSS';
+  if (lower.endsWith('.js') || lower.endsWith('.mjs')) return 'JavaScript';
+  if (lower.endsWith('.json')) return 'JSON';
+  return 'Text';
 }
 
 function renderAiOutput(output) {
@@ -481,24 +518,58 @@ function renderAiOutput(output) {
   }
 
   currentAiOutput = output;
+  currentAiFiles = normalizeAiFiles(output);
+  currentAiFileIndex = Math.max(0, currentAiFiles.findIndex((file) => file.primary));
 
-  document.getElementById('ai-editor-filename').textContent = output.filename || 'snippet.js';
-  document.getElementById('ai-editor-language-label').textContent = output.language || 'Text';
-  document.getElementById('ai-lines').textContent = String(output.stats?.lines || countLines(output.code || ''));
-  document.getElementById('ai-language').textContent = output.language || 'Text';
-
-  const complexityLevel = output.complexity?.level || 'Low';
-  const complexityElement = document.getElementById('ai-complexity');
-  complexityElement.textContent = complexityLevel;
-  complexityElement.className = `meta-value complexity-${complexityLevel.toLowerCase()}`;
+  document.getElementById('ai-file-count').textContent = String(output.stats?.files || currentAiFiles.length);
 
   const statusText = output.stats?.status || 'Ready';
   document.getElementById('ai-output-status').innerHTML = `<span class="status-dot"></span> ${escapeHtml(statusText)}`;
 
-  renderCodeBlock(output.code || '');
+  renderAiFileTabs(currentAiFiles);
+  setActiveAiFile(currentAiFileIndex);
   renderAiTips(output.tips || []);
   renderAiExplanation(output);
-  renderAiPreview(output.preview || { kind: 'note', title: 'Preview unavailable', body: 'No preview was returned for this output.' });
+  renderAiPreview(output.preview || { mode: 'note', title: 'Preview unavailable', body: 'No preview was returned for this output.' });
+}
+
+function renderAiFileTabs(files) {
+  const container = document.getElementById('ai-file-tabs');
+  container.innerHTML = files.map((file, index) => `
+    <button class="file-tab${index === currentAiFileIndex ? ' active' : ''}" type="button" data-file-index="${index}">
+      ${escapeHtml(file.filename)}
+    </button>
+  `).join('');
+
+  container.querySelectorAll('[data-file-index]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = Number.parseInt(button.dataset.fileIndex, 10);
+      setActiveAiFile(index);
+    });
+  });
+}
+
+function setActiveAiFile(index) {
+  const safeIndex = currentAiFiles[index] ? index : 0;
+  const file = currentAiFiles[safeIndex] || currentAiFiles[0];
+
+  if (!file) {
+    return;
+  }
+
+  currentAiFileIndex = safeIndex;
+
+  document.getElementById('ai-editor-filename').textContent = file.filename;
+  document.getElementById('ai-editor-language-label').textContent = file.language || 'Text';
+  document.getElementById('ai-lines').textContent = String(countLines(file.content || ''));
+  document.getElementById('ai-language').textContent = file.language || 'Text';
+
+  document.querySelectorAll('#ai-file-tabs .file-tab').forEach((button) => {
+    const buttonIndex = Number.parseInt(button.dataset.fileIndex, 10);
+    button.classList.toggle('active', buttonIndex === currentAiFileIndex);
+  });
+
+  renderCodeBlock(file.content || '');
 }
 
 function renderCodeBlock(code) {
@@ -508,10 +579,15 @@ function renderCodeBlock(code) {
 
 function renderAiTips(tips) {
   const tipsList = document.getElementById('ai-tips');
-  tipsList.innerHTML = tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join('');
+  const normalizedTips = Array.isArray(tips) && tips.length > 0
+    ? tips
+    : ['Ask for a browser UI if you want a live preview artifact.'];
+
+  tipsList.innerHTML = normalizedTips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join('');
 }
 
 function renderAiExplanation(output) {
+  document.getElementById('ai-summary-text').textContent = output.summary || '';
   document.getElementById('ai-explanation-text').textContent = output.explanation || '';
 
   const stepList = document.getElementById('ai-step-list');
@@ -528,29 +604,123 @@ function renderAiExplanation(output) {
   document.getElementById('ai-paradigm').textContent = output.complexity?.paradigm || 'JavaScript';
 }
 
+function resolveAiPreview(preview, files = []) {
+  if (preview?.mode === 'live') {
+    const htmlFile = files.find((file) => file.language.toLowerCase() === 'html');
+    const cssFile = files.find((file) => file.language.toLowerCase() === 'css');
+    const jsFile = files.find((file) => file.primary) || files.find((file) => file.language.toLowerCase().includes('javascript'));
+
+    return {
+      mode: 'live',
+      title: String(preview.title || 'Live preview').trim() || 'Live preview',
+      body: String(preview.body || 'Rendered inside an isolated sandbox using the backend response artifact.').trim(),
+      markup: String(preview.markup || htmlFile?.content || '').trim(),
+      styles: String(preview.styles || cssFile?.content || '').trim(),
+      script: String(preview.script || jsFile?.content || '').trim(),
+    };
+  }
+
+  if (preview?.kind === 'calculator' || preview?.kind === 'todo') {
+    return {
+      kind: preview.kind,
+      note: String(preview.note || '').trim(),
+      title: String(preview.title || 'Preview').trim(),
+      body: String(preview.body || '').trim(),
+    };
+  }
+
+  return {
+    mode: 'note',
+    title: String(preview?.title || 'Preview unavailable').trim() || 'Preview unavailable',
+    body: String(preview?.body || preview?.note || 'No live preview was provided for this response.').trim(),
+    markup: '',
+    styles: '',
+    script: '',
+  };
+}
+
 function renderAiPreview(preview) {
   const container = document.getElementById('ai-preview-body');
+  const resolvedPreview = resolveAiPreview(preview, currentAiFiles);
 
-  if (preview.kind === 'calculator') {
-    container.innerHTML = getCalculatorPreviewMarkup(preview.note);
+  document.getElementById('ai-preview-caption').textContent = resolvedPreview.body || 'Rendered from the current artifact.';
+
+  if (resolvedPreview.mode === 'live' && (resolvedPreview.markup || resolvedPreview.script || resolvedPreview.styles)) {
+    container.innerHTML = getLivePreviewMarkup(resolvedPreview);
+    const frame = document.getElementById('ai-preview-frame');
+    frame.srcdoc = buildPreviewSrcdoc(resolvedPreview);
+    return;
+  }
+
+  if (resolvedPreview.kind === 'calculator') {
+    container.innerHTML = getCalculatorPreviewMarkup(resolvedPreview.note);
     resetCalculatorState();
     return;
   }
 
-  if (preview.kind === 'todo') {
-    container.innerHTML = getTodoPreviewMarkup(preview.note);
+  if (resolvedPreview.kind === 'todo') {
+    container.innerHTML = getTodoPreviewMarkup(resolvedPreview.note);
     return;
   }
 
   container.innerHTML = getNotePreviewMarkup(
-    preview.title || 'Preview unavailable',
-    preview.body || preview.note || 'No live preview was provided for this response.',
+    resolvedPreview.title,
+    resolvedPreview.body || 'No live preview was provided for this response.',
   );
+}
+
+function buildPreviewSrcdoc(preview) {
+  const inlineScript = String(preview.script || '').replace(/<\/script/gi, '<\\/script');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: https:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src https: data:; connect-src https:;">
+    <style>
+      html, body { margin: 0; min-height: 100%; }
+      ${preview.styles || ''}
+    </style>
+  </head>
+  <body>
+    ${preview.markup || ''}
+    <script>${inlineScript}<\/script>
+  </body>
+</html>`;
+}
+
+function getLivePreviewMarkup(preview) {
+  return `
+    <div class="preview-meta">
+      <span class="preview-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        ${escapeHtml(preview.title || 'Live preview')}
+      </span>
+      <span class="preview-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        Isolated iframe sandbox
+      </span>
+    </div>
+    <div class="preview-frame-shell">
+      <iframe
+        id="ai-preview-frame"
+        class="preview-frame"
+        title="${escapeHtml(preview.title || 'AI preview')}"
+        sandbox="allow-scripts allow-forms allow-modals"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+  `;
 }
 
 function getCalculatorPreviewMarkup(note) {
   return `
-    <div class="preview-label">Live Preview</div>
+    <div class="preview-label">Legacy Preview</div>
     <div class="calculator-preview">
       <div class="calc-screen">
         <div class="calc-history" id="calc-history"></div>
@@ -585,14 +755,14 @@ function getCalculatorPreviewMarkup(note) {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      ${escapeHtml(note || 'Try it yourself — click buttons or use your keyboard.')}
+      ${escapeHtml(note || 'This preview was generated from an older stored artifact.')}
     </div>
   `;
 }
 
 function getTodoPreviewMarkup(note) {
   return `
-    <div class="preview-label">UI Sketch</div>
+    <div class="preview-label">Legacy Preview</div>
     <div class="calculator-preview" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
       <div style="display:flex;gap:10px;">
         <input class="setting-input" value="Ship backend integration" readonly />
@@ -613,81 +783,319 @@ function getTodoPreviewMarkup(note) {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      ${escapeHtml(note || 'This preview shows the shape of the todo interface driven by the returned code.')}
+      ${escapeHtml(note || 'This preview was generated from an older stored artifact.')}
     </div>
   `;
 }
 
 function getNotePreviewMarkup(title, body) {
   return `
-    <div class="preview-label">${escapeHtml(title)}</div>
-    <div class="calculator-preview" style="padding:28px;display:flex;align-items:center;justify-content:center;min-height:320px;">
-      <div class="preview-note" style="max-width:420px;">
+    <div class="preview-meta">
+      <span class="preview-badge note">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        ${escapeHtml(body)}
-      </div>
+        ${escapeHtml(title)}
+      </span>
+    </div>
+    <div class="preview-note-card">
+      <h4>${escapeHtml(title)}</h4>
+      <p>${escapeHtml(body)}</p>
     </div>
   `;
 }
 
-function captureFallbackAiOutput() {
-  const code = document.querySelector('#code-output pre code')?.innerText || '';
-
-  return {
-    filename: document.getElementById('ai-editor-filename').textContent || 'calculator.js',
-    language: document.getElementById('ai-editor-language-label').textContent || 'JavaScript',
-    code,
-    explanation: document.getElementById('ai-explanation-text').textContent || '',
-    steps: Array.from(document.querySelectorAll('#ai-step-list .step-body')).map((element) => element.textContent.trim()),
-    tips: Array.from(document.querySelectorAll('#ai-tips li')).map((element) => element.textContent.trim()),
-    complexity: {
-      level: document.getElementById('ai-complexity').textContent || 'Low',
-      time: document.getElementById('ai-time-complexity').textContent || 'O(1)',
-      space: document.getElementById('ai-space-complexity').textContent || 'O(1)',
-      pattern: document.getElementById('ai-pattern').textContent || 'State Machine',
-      paradigm: document.getElementById('ai-paradigm').textContent || 'OOP / ES6',
-    },
-    preview: {
-      kind: 'calculator',
-      note: 'Try it yourself — click buttons or use your keyboard.',
-      title: 'Live Preview',
-      body: '',
-    },
-    stats: {
-      lines: countLines(code),
-      language: document.getElementById('ai-language').textContent || 'JavaScript',
-      status: 'Ready',
-    },
-  };
+function getActiveAiFile() {
+  return currentAiFiles[currentAiFileIndex] || currentAiFiles[0] || null;
 }
 
 function copyCode() {
-  const artifact = currentAiOutput || defaultAiOutput;
+  const file = getActiveAiFile();
 
-  if (!artifact?.code) {
+  if (!file?.content) {
     showToast('No code available to copy');
     return;
   }
 
-  navigator.clipboard.writeText(artifact.code).then(() => {
-    showToast('Code copied to clipboard');
+  navigator.clipboard.writeText(file.content).then(() => {
+    showToast(`Copied ${file.filename}`);
   });
 }
 
 function downloadCode() {
-  const artifact = currentAiOutput || defaultAiOutput;
+  const file = getActiveAiFile();
 
-  if (!artifact?.code) {
+  if (!file?.content) {
     showToast('No code available to download');
     return;
   }
 
-  const filename = artifact.filename || 'snippet.txt';
-  const type = artifact.language === 'JavaScript' ? 'text/javascript' : 'text/plain';
-  triggerDownload(artifact.code, filename, type);
-  showToast(`Downloading ${filename}`);
+  triggerDownload(file.content, file.filename, getDownloadMimeType(file));
+  showToast(`Downloading ${file.filename}`);
+}
+
+function getDownloadMimeType(file) {
+  const language = String(file?.language || '').toLowerCase();
+  const filename = String(file?.filename || '').toLowerCase();
+
+  if (language === 'html' || filename.endsWith('.html')) return 'text/html';
+  if (language === 'css' || filename.endsWith('.css')) return 'text/css';
+  if (language === 'json' || filename.endsWith('.json')) return 'application/json';
+  if (language.includes('javascript') || filename.endsWith('.js') || filename.endsWith('.mjs')) return 'text/javascript';
+  return 'text/plain';
+}
+
+function createDefaultAiOutput() {
+  const markup = `<main class="demo-shell">
+  <section class="demo-card">
+    <header>
+      <p>FAB-LabCode Sandbox</p>
+      <span>Interactive calculator sample</span>
+    </header>
+    <div id="history" class="history"></div>
+    <div id="display" class="display">0</div>
+    <div class="pad">
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button data-value="/">/</button>
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button data-value="*">*</button>
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button data-value="-">-</button>
+      <button class="wide" data-value="0">0</button>
+      <button data-value=".">.</button>
+      <button data-value="+">+</button>
+      <button class="accent" data-value="=">=</button>
+      <button class="wide muted" data-value="clear">AC</button>
+    </div>
+  </section>
+</main>`;
+
+  const styles = `body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, system-ui, sans-serif;
+  background: linear-gradient(180deg, #f8fafc, #eef2ff);
+}
+
+.demo-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.demo-card {
+  width: min(100%, 320px);
+  border-radius: 24px;
+  padding: 22px;
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+header p {
+  margin: 0;
+  font-weight: 700;
+}
+
+header span {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.history {
+  min-height: 18px;
+  text-align: right;
+  color: rgba(226, 232, 240, 0.55);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.display {
+  text-align: right;
+  font-size: 42px;
+  font-family: "JetBrains Mono", monospace;
+  margin: 8px 0 18px;
+}
+
+.pad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.pad button {
+  min-height: 54px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  background: rgba(51, 65, 85, 0.96);
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+}
+
+.pad button.accent {
+  background: linear-gradient(135deg, #f97316, #fb7185);
+}
+
+.pad button.muted {
+  background: rgba(148, 163, 184, 0.95);
+  color: #020617;
+}
+
+.pad button.wide {
+  grid-column: span 2;
+}`;
+
+  const script = `class DemoCalculator {
+  constructor() {
+    this.display = document.getElementById('display');
+    this.history = document.getElementById('history');
+    this.current = '';
+    this.previous = null;
+    this.operator = null;
+
+    document.querySelectorAll('[data-value]').forEach((button) => {
+      button.addEventListener('click', () => this.handle(button.dataset.value));
+    });
+  }
+
+  handle(value) {
+    if (value === 'clear') {
+      this.current = '';
+      this.previous = null;
+      this.operator = null;
+      this.history.textContent = '';
+      this.render();
+      return;
+    }
+
+    if (value === '=') {
+      if (this.operator === null || this.current === '') return;
+      const right = Number(this.current);
+      const operations = {
+        '+': (a, b) => a + b,
+        '-': (a, b) => a - b,
+        '*': (a, b) => a * b,
+        '/': (a, b) => (b === 0 ? 'Error' : a / b),
+      };
+      const result = operations[this.operator](this.previous, right);
+      this.history.textContent = \`\${this.previous} \${this.operator} \${right} =\`;
+      this.current = String(result);
+      this.operator = null;
+      this.previous = null;
+      this.render();
+      return;
+    }
+
+    if (['+', '-', '*', '/'].includes(value)) {
+      if (!this.current) return;
+      this.previous = Number(this.current);
+      this.operator = value;
+      this.history.textContent = \`\${this.previous} \${value}\`;
+      this.current = '';
+      this.render();
+      return;
+    }
+
+    if (value === '.' && this.current.includes('.')) return;
+    this.current += value;
+    this.render();
+  }
+
+  render() {
+    this.display.textContent = this.current || '0';
+  }
+}
+
+new DemoCalculator();`;
+
+  const jsFile = 'demo-calculator.js';
+
+  return {
+    title: 'Sandbox Demo Artifact',
+    summary: 'This built-in sample uses the same renderer as the backend responses: real files, a live preview sandbox, and a detailed explanation block.',
+    filename: jsFile,
+    language: 'JavaScript',
+    code: script,
+    files: [
+      {
+        filename: 'index.html',
+        language: 'HTML',
+        content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAB-LabCode Sandbox Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    ${markup}
+    <script src="${jsFile}"></script>
+  </body>
+</html>`,
+      },
+      {
+        filename: 'styles.css',
+        language: 'CSS',
+        content: styles,
+      },
+      {
+        filename: jsFile,
+        language: 'JavaScript',
+        content: script,
+        primary: true,
+      },
+    ],
+    explanation: 'The frontend now treats the sandbox as a backend artifact renderer. The same response payload drives the live preview iframe, the code viewer, and the explanation panel, so the three surfaces stay in sync.',
+    steps: [
+      'The artifact defines concrete files instead of only a single code snippet.',
+      'The preview section composes a sandboxed iframe from backend-provided markup, styles, and script.',
+      'The code pane exposes the underlying files directly so you can inspect the exact implementation that powers the preview.',
+      'The explanation pane summarizes the flow and gives complexity and implementation notes without leaving the workspace.',
+    ],
+    tips: [
+      'Ask for browser-based UIs when you want a runnable preview.',
+      'Keep generated files small and explicit so the preview remains debuggable.',
+      'Prefer plain HTML, CSS, and JavaScript if you want the sandbox to execute the result immediately.',
+      'Use the file chips to inspect support files such as HTML and CSS alongside the main code file.',
+    ],
+    complexity: {
+      level: 'Low',
+      time: 'O(1)',
+      space: 'O(1)',
+      pattern: 'Artifact Rendering',
+      paradigm: 'Browser Sandbox',
+    },
+    preview: {
+      mode: 'live',
+      title: 'Interactive sample preview',
+      body: 'The iframe runs the same artifact data you see in the code viewer.',
+      markup,
+      styles,
+      script,
+    },
+    stats: {
+      lines: countLines(script),
+      files: 3,
+      language: 'JavaScript',
+      status: 'Live preview ready',
+    },
+  };
 }
 
 /* ================================================
@@ -1408,7 +1816,9 @@ function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function countLines(text) {
@@ -1420,8 +1830,9 @@ function countLines(text) {
 ================================================ */
 document.addEventListener('DOMContentLoaded', async () => {
   switchMode('gcode');
-  defaultAiOutput = captureFallbackAiOutput();
+  defaultAiOutput = createDefaultAiOutput();
   currentAiOutput = defaultAiOutput;
+  renderAiOutput(defaultAiOutput);
   updateCharCount(document.getElementById('gcode-instruction'));
   updateAuthUi();
   renderSignedOutChatState();

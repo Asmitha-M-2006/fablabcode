@@ -2,145 +2,11 @@
 
 const { createHttpError } = require('./errors');
 const { getConfig } = require('./config');
-
-const RESPONSE_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['reply', 'output'],
-  properties: {
-    reply: {
-      type: 'string',
-    },
-    output: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['title', 'filename', 'language', 'code', 'explanation', 'steps', 'tips', 'complexity', 'preview'],
-      properties: {
-        title: { type: 'string' },
-        filename: { type: 'string' },
-        language: { type: 'string' },
-        code: { type: 'string' },
-        explanation: { type: 'string' },
-        steps: {
-          type: 'array',
-          items: { type: 'string' },
-          minItems: 1,
-          maxItems: 6,
-        },
-        tips: {
-          type: 'array',
-          items: { type: 'string' },
-          minItems: 1,
-          maxItems: 6,
-        },
-        complexity: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['level', 'time', 'space', 'pattern', 'paradigm'],
-          properties: {
-            level: {
-              type: 'string',
-              enum: ['Low', 'Medium', 'High'],
-            },
-            time: { type: 'string' },
-            space: { type: 'string' },
-            pattern: { type: 'string' },
-            paradigm: { type: 'string' },
-          },
-        },
-        preview: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['kind', 'note', 'title', 'body'],
-          properties: {
-            kind: {
-              type: 'string',
-              enum: ['calculator', 'todo', 'note'],
-            },
-            note: { type: 'string' },
-            title: { type: 'string' },
-            body: { type: 'string' },
-          },
-        },
-      },
-    },
-  },
-};
-
-function countLines(text) {
-  return String(text || '').split('\n').length;
-}
-
-function sanitizeFilename(filename) {
-  const safe = String(filename || 'snippet.js')
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]/g, '-')
-    .replace(/-+/g, '-');
-
-  return safe || 'snippet.js';
-}
-
-function normalizeStringArray(values, fallback) {
-  const items = Array.isArray(values)
-    ? values.map((value) => String(value || '').trim()).filter(Boolean)
-    : [];
-
-  return items.length > 0 ? items : fallback;
-}
-
-function normalizeOutput(payload) {
-  const output = payload?.output || {};
-  const language = String(output.language || 'JavaScript').trim() || 'JavaScript';
-  const code = String(output.code || '').trim();
-
-  if (!code) {
-    throw createHttpError(502, 'OpenAI did not return code content');
-  }
-
-  return {
-    reply: String(payload.reply || 'Here is the generated result.').trim(),
-    output: {
-      title: String(output.title || 'Generated Output').trim() || 'Generated Output',
-      filename: sanitizeFilename(output.filename),
-      language,
-      code,
-      explanation: String(output.explanation || '').trim(),
-      steps: normalizeStringArray(output.steps, ['Read the generated code and adapt it to the current UI flow.']),
-      tips: normalizeStringArray(output.tips, ['Validate the generated code before wiring it into production flows.']),
-      complexity: {
-        level: ['Low', 'Medium', 'High'].includes(output.complexity?.level) ? output.complexity.level : 'Medium',
-        time: String(output.complexity?.time || 'O(1)').trim(),
-        space: String(output.complexity?.space || 'O(1)').trim(),
-        pattern: String(output.complexity?.pattern || 'General').trim(),
-        paradigm: String(output.complexity?.paradigm || 'JavaScript').trim(),
-      },
-      preview: {
-        kind: ['calculator', 'todo', 'note'].includes(output.preview?.kind) ? output.preview.kind : 'note',
-        note: String(output.preview?.note || '').trim(),
-        title: String(output.preview?.title || 'Preview').trim(),
-        body: String(output.preview?.body || '').trim(),
-      },
-      stats: {
-        lines: countLines(code),
-        language,
-        status: 'Ready',
-      },
-    },
-  };
-}
-
-function buildConversationText(history, message) {
-  const recentHistory = Array.isArray(history) ? history.slice(-10) : [];
-
-  const serializedHistory = recentHistory.map((entry) => (
-    `${String(entry.role || 'user').toUpperCase()}: ${String(entry.content || '').trim()}`
-  )).join('\n');
-
-  return [
-    serializedHistory ? `Conversation history:\n${serializedHistory}` : 'Conversation history:\nNone.',
-    `Current user request:\n${message}`,
-  ].join('\n\n');
-}
+const {
+  RESPONSE_SCHEMA,
+  buildConversationText,
+  normalizeOutput,
+} = require('./ai-output');
 
 function extractOutputText(payload) {
   if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
@@ -180,10 +46,14 @@ async function generateOpenAiAssistantReply({ message, history }) {
         'You are FAB-LabCode AI, a code-focused assistant inside a browser-based fabrication lab tool.',
         'Return valid JSON only.',
         'The "reply" field is the short assistant bubble shown in chat.',
-        'The "output" field must contain a code artifact, explanation, steps, tips, complexity summary, and preview metadata.',
-        'Use preview.kind="calculator" only for calculator-style prompts, preview.kind="todo" for todo-list prompts, otherwise preview.kind="note".',
-        'When preview.kind is "note", provide a concise title and body explaining why a live UI preview is not appropriate.',
-        'Prefer practical, production-leaning code over placeholder pseudocode.',
+        'The "output" field must describe one concrete artifact that the frontend can render directly.',
+        'Always return at least one file in output.files. Mark exactly one file as primary.',
+        'Set output.code to the primary file content for quick inline viewing.',
+        'Use output.preview.mode="live" only when the request is suitable for a browser preview with plain HTML, CSS, and JavaScript.',
+        'For live previews, output.preview.markup must contain body markup only, output.preview.styles must contain plain CSS, and output.preview.script must contain JavaScript that runs without build tools.',
+        'For non-visual or backend-only requests, use output.preview.mode="note" and leave markup/styles/script empty.',
+        'Prefer practical, production-leaning code over pseudocode.',
+        'Do not wrap the files in Markdown fences.',
       ].join(' '),
       input: buildConversationText(history, message),
       text: {
@@ -195,7 +65,7 @@ async function generateOpenAiAssistantReply({ message, history }) {
         },
         verbosity: 'medium',
       },
-      max_output_tokens: 4000,
+      max_output_tokens: 5000,
     }),
   });
 
@@ -206,7 +76,7 @@ async function generateOpenAiAssistantReply({ message, history }) {
   }
 
   const parsed = JSON.parse(extractOutputText(payload));
-  return normalizeOutput(parsed);
+  return normalizeOutput(parsed, 'OpenAI');
 }
 
 module.exports = { generateOpenAiAssistantReply };

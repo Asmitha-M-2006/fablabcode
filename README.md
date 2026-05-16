@@ -20,6 +20,15 @@ For auto-reload during development:
 npm run dev
 ```
 
+To enable authenticated chat with a real model, provide env vars through your shell or a local `.env` / `.env.local` file:
+
+```bash
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_key
+DATABASE_URL=your_postgres_url
+SESSION_SECRET=your_random_secret
+```
+
 ## Test
 
 ```bash

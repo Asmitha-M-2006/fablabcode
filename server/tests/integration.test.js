@@ -103,6 +103,10 @@ test('chat flow persists history for authenticated users', async () => {
   assert.equal(chat.response.status, 200);
   assert.match(chat.payload.reply, /calculator/i);
   assert.equal(chat.payload.output.filename, 'calculator.js');
+  assert.equal(chat.payload.output.files.length, 3);
+  assert.equal(chat.payload.output.preview.mode, 'live');
+  assert.match(chat.payload.output.preview.markup, /calc-shell/);
+  assert.match(chat.payload.output.preview.script, /new Calculator/);
 
   const history = await requestJson('/api/chat/history', {
     headers: {
@@ -115,6 +119,8 @@ test('chat flow persists history for authenticated users', async () => {
   assert.equal(history.payload.messages[0].role, 'user');
   assert.equal(history.payload.messages[1].role, 'assistant');
   assert.equal(history.payload.messages[1].artifact.filename, 'calculator.js');
+  assert.equal(history.payload.messages[1].artifact.files.length, 3);
+  assert.equal(history.payload.messages[1].artifact.preview.mode, 'live');
 
   const clear = await requestJson('/api/chat/history', {
     method: 'DELETE',

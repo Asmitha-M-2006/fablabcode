@@ -1,6 +1,7 @@
 'use strict';
 
 const { generateAssistantReply } = require('./ai-assistant');
+const { generateGeminiAssistantReply } = require('./gemini-service');
 const { generateOpenAiAssistantReply } = require('./openai-service');
 const {
   clearChatMessagesByUserId,
@@ -28,11 +29,18 @@ async function createChatReply({ user, message }) {
   }
 
   const recentHistory = await listChatMessagesByUserId(user.id, 12);
-  const { openAiApiKey } = getConfig();
+  const config = getConfig();
+  let payload;
+  let provider = config.resolvedAiProvider;
 
-  const payload = openAiApiKey
-    ? await generateOpenAiAssistantReply({ message: trimmedMessage, history: recentHistory })
-    : generateAssistantReply({ message: trimmedMessage, history: recentHistory });
+  if (provider === 'openai') {
+    payload = await generateOpenAiAssistantReply({ message: trimmedMessage, history: recentHistory });
+  } else if (provider === 'gemini') {
+    payload = await generateGeminiAssistantReply({ message: trimmedMessage, history: recentHistory });
+  } else {
+    provider = 'fallback';
+    payload = generateAssistantReply({ message: trimmedMessage, history: recentHistory });
+  }
 
   await createChatMessage({
     userId: user.id,
@@ -51,7 +59,7 @@ async function createChatReply({ user, message }) {
   return {
     ...payload,
     meta: {
-      provider: openAiApiKey ? 'openai' : 'fallback',
+      provider,
       generatedAt: new Date().toISOString(),
     },
   };

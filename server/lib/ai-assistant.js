@@ -1,5 +1,149 @@
 'use strict';
 
+const CALCULATOR_MARKUP = `<main class="calc-shell">
+  <section class="calc-card">
+    <header class="calc-header">
+      <p>Keyboard-ready calculator</p>
+      <span>Click inside the preview to focus it</span>
+    </header>
+    <div class="history"></div>
+    <div class="display">0</div>
+    <div class="keys">
+      <button class="key key-muted" data-value="clear">AC</button>
+      <button class="key key-muted" data-value="%">%</button>
+      <button class="key key-accent" data-value="/">/</button>
+      <button class="key" data-value="7">7</button>
+      <button class="key" data-value="8">8</button>
+      <button class="key" data-value="9">9</button>
+      <button class="key key-accent" data-value="*">*</button>
+      <button class="key" data-value="4">4</button>
+      <button class="key" data-value="5">5</button>
+      <button class="key" data-value="6">6</button>
+      <button class="key key-accent" data-value="-">-</button>
+      <button class="key" data-value="1">1</button>
+      <button class="key" data-value="2">2</button>
+      <button class="key" data-value="3">3</button>
+      <button class="key key-accent" data-value="+">+</button>
+      <button class="key key-wide" data-value="0">0</button>
+      <button class="key" data-value=".">.</button>
+      <button class="key key-accent" data-value="=">=</button>
+    </div>
+  </section>
+</main>`;
+
+const CALCULATOR_STYLES = `:root {
+  color-scheme: light;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(99, 102, 241, 0.18), transparent 40%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  color: #0f172a;
+}
+
+.calc-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.calc-card {
+  width: min(100%, 340px);
+  background: rgba(15, 23, 42, 0.96);
+  color: #fff;
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.calc-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.calc-header p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.calc-header span {
+  max-width: 120px;
+  text-align: right;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.history {
+  min-height: 20px;
+  text-align: right;
+  color: rgba(226, 232, 240, 0.54);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  margin-bottom: 8px;
+}
+
+.display {
+  text-align: right;
+  font-size: 46px;
+  line-height: 1;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  margin-bottom: 18px;
+  min-height: 48px;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.key {
+  border: none;
+  border-radius: 18px;
+  min-height: 58px;
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+  background: rgba(51, 65, 85, 0.92);
+  color: #fff;
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.key:hover {
+  filter: brightness(1.08);
+}
+
+.key:active {
+  transform: scale(0.97);
+}
+
+.key-muted {
+  background: rgba(148, 163, 184, 0.95);
+  color: #020617;
+}
+
+.key-accent {
+  background: linear-gradient(135deg, #f97316, #fb7185);
+}
+
+.key-wide {
+  grid-column: span 2;
+}
+`;
+
 const CALCULATOR_CODE = `class Calculator {
   constructor(displaySelector, historySelector) {
     this.display = document.querySelector(displaySelector);
@@ -8,6 +152,7 @@ const CALCULATOR_CODE = `class Calculator {
     this.operator = null;
     this.previous = null;
     this.bindKeyboard();
+    this.bindButtons();
     this.render();
   }
 
@@ -18,6 +163,18 @@ const CALCULATOR_CODE = `class Calculator {
       if (event.key === 'Enter') return this.evaluate();
       if (event.key === 'Backspace') return this.backspace();
       if (event.key === 'Escape') return this.clear();
+    });
+  }
+
+  bindButtons() {
+    document.querySelectorAll('[data-value]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const { value } = button.dataset;
+        if (value === '=') return this.evaluate();
+        if (value === 'clear') return this.clear();
+        if (['+', '-', '*', '/', '%'].includes(value)) return this.setOperator(value);
+        this.input(value);
+      });
     });
   }
 
@@ -39,6 +196,7 @@ const CALCULATOR_CODE = `class Calculator {
 
   evaluate() {
     if (this.operator === null || this.current === '') return;
+
     const value = Number(this.current);
     const operations = {
       '+': (a, b) => a + b,
@@ -74,15 +232,183 @@ const CALCULATOR_CODE = `class Calculator {
   }
 }
 
-const calculator = new Calculator('.display', '.history');`;
+new Calculator('.display', '.history');`;
+
+const TODO_MARKUP = `<main class="todo-shell">
+  <section class="todo-card">
+    <header class="todo-header">
+      <div>
+        <p>Todo workspace</p>
+        <span>Interactive preview rendered from backend files</span>
+      </div>
+      <strong id="todo-count">0 open</strong>
+    </header>
+
+    <form id="todo-form" class="todo-form">
+      <input id="todo-input" type="text" placeholder="Add a task for the sandbox" autocomplete="off" />
+      <button type="submit">Add</button>
+    </form>
+
+    <ul id="todo-list" class="todo-list"></ul>
+  </section>
+</main>`;
+
+const TODO_STYLES = `:root {
+  color-scheme: light;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 35%),
+    linear-gradient(180deg, #f8fafc 0%, #ecfeff 100%);
+  color: #0f172a;
+}
+
+.todo-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.todo-card {
+  width: min(100%, 540px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.todo-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.todo-header p {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.todo-header span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.todo-header strong {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
+.todo-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.todo-form input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font: inherit;
+}
+
+.todo-form button {
+  border: none;
+  border-radius: 14px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, #0f766e, #0ea5e9);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.todo-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.todo-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.todo-item span {
+  font-size: 14px;
+}
+
+.todo-item.is-done span {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+.todo-item button {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  color: #991b1b;
+  font: inherit;
+  cursor: pointer;
+}
+
+.todo-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  padding: 22px 18px;
+  text-align: center;
+  color: #64748b;
+  background: rgba(248, 250, 252, 0.8);
+}
+`;
 
 const TODO_CODE = `class TodoApp {
-  constructor(formSelector, inputSelector, listSelector) {
+  constructor(formSelector, inputSelector, listSelector, countSelector) {
     this.form = document.querySelector(formSelector);
     this.input = document.querySelector(inputSelector);
     this.list = document.querySelector(listSelector);
+    this.count = document.querySelector(countSelector);
     this.todos = [];
+    this.nextId = 1;
+
     this.form.addEventListener('submit', (event) => this.handleSubmit(event));
+    this.list.addEventListener('change', (event) => this.handleToggle(event));
+    this.list.addEventListener('click', (event) => this.handleRemove(event));
+
+    this.render();
   }
 
   handleSubmit(event) {
@@ -91,13 +417,33 @@ const TODO_CODE = `class TodoApp {
     if (!title) return;
 
     this.todos.unshift({
-      id: crypto.randomUUID(),
+      id: String(this.nextId++),
       title,
       done: false,
     });
 
     this.input.value = '';
     this.render();
+  }
+
+  handleToggle(event) {
+    const checkbox = event.target.closest('input[type="checkbox"]');
+    if (!checkbox) return;
+
+    const item = checkbox.closest('[data-id]');
+    if (!item) return;
+
+    this.toggle(item.dataset.id);
+  }
+
+  handleRemove(event) {
+    const button = event.target.closest('[data-action="remove"]');
+    if (!button) return;
+
+    const item = button.closest('[data-id]');
+    if (!item) return;
+
+    this.remove(item.dataset.id);
   }
 
   toggle(id) {
@@ -113,19 +459,25 @@ const TODO_CODE = `class TodoApp {
   }
 
   render() {
+    const openItems = this.todos.filter((todo) => !todo.done).length;
+    this.count.textContent = \`\${openItems} open\`;
+
+    if (this.todos.length === 0) {
+      this.list.innerHTML = '<li class="todo-empty">Add your first task to see the live preview update.</li>';
+      return;
+    }
+
     this.list.innerHTML = this.todos.map((todo) => \`
-      <li data-id="\${todo.id}">
-        <label>
-          <input type="checkbox" \${todo.done ? 'checked' : ''} />
-          <span>\${todo.title}</span>
-        </label>
+      <li class="todo-item \${todo.done ? 'is-done' : ''}" data-id="\${todo.id}">
+        <input type="checkbox" \${todo.done ? 'checked' : ''} />
+        <span>\${todo.title}</span>
         <button type="button" data-action="remove">Delete</button>
       </li>
     \`).join('');
   }
 }
 
-const app = new TodoApp('#todo-form', '#todo-input', '#todo-list');`;
+new TodoApp('#todo-form', '#todo-input', '#todo-list', '#todo-count');`;
 
 const API_CLIENT_CODE = `class ApiClient {
   constructor(baseUrl, defaultHeaders = {}) {
@@ -211,25 +563,63 @@ function merge(left, right) {
 }`;
 
 function lineCount(code) {
-  return code.split('\n').length;
+  return String(code || '').split('\n').length;
+}
+
+function createFile(filename, language, content, primary = false) {
+  return {
+    filename,
+    language,
+    content,
+    primary,
+  };
+}
+
+function createLivePreview({ title, body, markup, styles, script }) {
+  return {
+    mode: 'live',
+    title,
+    body,
+    markup,
+    styles,
+    script,
+  };
+}
+
+function createNotePreview(title, body) {
+  return {
+    mode: 'note',
+    title,
+    body,
+    markup: '',
+    styles: '',
+    script: '',
+  };
 }
 
 function createOutput({
   title,
-  filename,
-  language,
-  code,
+  summary,
+  files,
   explanation,
   steps,
   tips,
   complexity,
   preview,
 }) {
+  const normalizedFiles = Array.isArray(files) && files.length > 0
+    ? files
+    : [createFile('snippet.js', 'JavaScript', '// No code was generated.', true)];
+
+  const primaryFile = normalizedFiles.find((file) => file.primary) || normalizedFiles[0];
+
   return {
     title,
-    filename,
-    language,
-    code,
+    summary,
+    filename: primaryFile.filename,
+    language: primaryFile.language,
+    code: primaryFile.content,
+    files: normalizedFiles,
     explanationTitle: 'How it works',
     explanation,
     steps,
@@ -237,97 +627,139 @@ function createOutput({
     complexity,
     preview,
     stats: {
-      lines: lineCount(code),
-      language,
-      status: 'Ready',
+      lines: lineCount(primaryFile.content),
+      files: normalizedFiles.length,
+      language: primaryFile.language,
+      status: preview.mode === 'live' ? 'Live preview ready' : 'Code ready',
     },
   };
 }
 
 function calculatorOutput() {
+  const files = [
+    createFile('index.html', 'HTML', `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Keyboard Calculator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    ${CALCULATOR_MARKUP}
+    <script src="calculator.js"></script>
+  </body>
+</html>`),
+    createFile('styles.css', 'CSS', CALCULATOR_STYLES),
+    createFile('calculator.js', 'JavaScript', CALCULATOR_CODE, true),
+  ];
+
   return createOutput({
     title: 'JavaScript Calculator',
-    filename: 'calculator.js',
-    language: 'JavaScript',
-    code: CALCULATOR_CODE,
-    explanation: 'This calculator keeps only the active input, the previous operand, and the pending operator in memory, so each interaction is just a small state transition.',
+    summary: 'A small browser calculator with keyboard shortcuts, clear state ownership, and a live preview.',
+    files,
+    explanation: 'This calculator keeps only the active input, the previous operand, and the pending operator in memory, so every click or keypress becomes a small, predictable state transition.',
     steps: [
-      'The constructor wires the display elements and installs global keyboard handlers.',
-      'Number and decimal input append into the active buffer while guarding duplicate decimal points.',
-      'Operator selection stores the left operand, clears the active input, and updates the history row.',
-      'Evaluation resolves the pending operation, handles divide-by-zero safely, and re-renders the display.',
+      'The constructor grabs the display nodes, wires both keyboard and button events, and renders the initial state.',
+      'Digits and decimals append into the active buffer while duplicate decimals are rejected before the state changes.',
+      'Operator selection stores the left operand, clears the active buffer, and writes the pending expression into the history row.',
+      'Evaluation resolves the pending operation, handles divide-by-zero safely, and pushes the final value back through render().',
     ],
     tips: [
-      'Keep the calculator state tiny so rendering remains straightforward.',
-      'Treat keyboard shortcuts as first-class input, not an afterthought.',
-      'Handle invalid arithmetic states such as divide-by-zero explicitly.',
-      'Render from state after every action instead of mutating scattered DOM nodes.',
+      'Treat the display as a projection of state instead of mutating it from several code paths.',
+      'Give keyboard shortcuts the same ownership path as button clicks so behavior does not diverge.',
+      'Store arithmetic state in a small object and re-render after every transition.',
+      'Handle invalid cases such as divide-by-zero explicitly instead of relying on implicit JavaScript behavior.',
     ],
     complexity: {
       level: 'Low',
       time: 'O(1)',
       space: 'O(1)',
       pattern: 'State Machine',
-      paradigm: 'OOP / ES6',
+      paradigm: 'DOM-driven OOP',
     },
-    preview: {
-      kind: 'calculator',
-      note: 'Try it yourself — click buttons or use your keyboard.',
-    },
+    preview: createLivePreview({
+      title: 'Interactive calculator',
+      body: 'The preview is rendered from backend-provided HTML, CSS, and JavaScript so the UI, explanation, and code all describe the same artifact.',
+      markup: CALCULATOR_MARKUP,
+      styles: CALCULATOR_STYLES,
+      script: CALCULATOR_CODE,
+    }),
   });
 }
 
 function todoOutput() {
+  const files = [
+    createFile('index.html', 'HTML', `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo Workspace</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    ${TODO_MARKUP}
+    <script src="todo-app.js"></script>
+  </body>
+</html>`),
+    createFile('styles.css', 'CSS', TODO_STYLES),
+    createFile('todo-app.js', 'JavaScript', TODO_CODE, true),
+  ];
+
   return createOutput({
     title: 'Todo List App',
-    filename: 'todo-app.js',
-    language: 'JavaScript',
-    code: TODO_CODE,
-    explanation: 'This todo implementation keeps all items in a single in-memory array and re-renders the list from that source of truth after every state change.',
+    summary: 'A small single-page todo UI with real add, toggle, and delete behavior running inside the preview sandbox.',
+    files,
+    explanation: 'This todo app keeps all records in a single array, listens for form and list events in one place, and re-renders from state after every mutation so the interface stays honest.',
     steps: [
-      'The app binds one submit handler to capture new items from the form.',
-      'New todos are normalized into small records with stable ids and a done flag.',
-      'Toggle and delete actions transform the array rather than mutating DOM in place.',
-      'Rendering maps the current array into markup so the UI always reflects the latest state.',
+      'The constructor captures the form, list, and counter elements, then registers submit, change, and click listeners.',
+      'Submitting the form normalizes input into a new todo record with a stable id before re-rendering the list.',
+      'Checkbox changes and delete clicks use event delegation so freshly rendered items keep working without extra wiring.',
+      'render() updates both the open-item count and the list markup from the current array, including an empty state.',
     ],
     tips: [
-      'Model todo items as plain objects with stable ids.',
-      'Prefer re-rendering from state over manual DOM patching when the UI is small.',
-      'Normalize user input by trimming it before inserting records.',
-      'Keep event ownership close to the component that owns the data.',
+      'Use event delegation for list UIs that frequently replace their children.',
+      'Keep the data model tiny so rendering logic stays easy to reason about.',
+      'Prefer a single render pass over ad hoc DOM updates when the UI is small.',
+      'Make empty states explicit so the preview stays informative before any data exists.',
     ],
     complexity: {
       level: 'Low',
       time: 'O(n)',
       space: 'O(n)',
       pattern: 'Single Source of Truth',
-      paradigm: 'Event-Driven UI',
+      paradigm: 'Event-driven UI',
     },
-    preview: {
-      kind: 'todo',
-      note: 'This preview shows the structure of the list UI that the code manages.',
-    },
+    preview: createLivePreview({
+      title: 'Interactive todo preview',
+      body: 'This preview is fully functional: add tasks, mark them done, and delete them to verify the returned code path.',
+      markup: TODO_MARKUP,
+      styles: TODO_STYLES,
+      script: TODO_CODE,
+    }),
   });
 }
 
 function apiClientOutput() {
   return createOutput({
     title: 'REST API Client',
-    filename: 'api-client.js',
-    language: 'JavaScript',
-    code: API_CLIENT_CODE,
-    explanation: 'The client funnels every request through one request method, which centralizes header handling, response parsing, and failure behavior.',
+    summary: 'A reusable client wrapper that centralizes fetch setup, JSON parsing, and error handling.',
+    files: [
+      createFile('api-client.js', 'JavaScript', API_CLIENT_CODE, true),
+    ],
+    explanation: 'The client pushes every request through one request() method, which keeps headers, parsing rules, and failure behavior consistent instead of scattering fetch details across the app.',
     steps: [
-      'The constructor stores the base URL and any default headers.',
-      'request() builds the fetch call and merges per-request options with defaults.',
-      'Unsuccessful responses are turned into errors with the status code and response text.',
-      'Convenience helpers expose GET, POST, PUT, and DELETE without repeating the core flow.',
+      'The constructor stores the normalized base URL and default headers once.',
+      'request() merges per-call options into the shared configuration and performs the fetch.',
+      'Non-2xx responses are converted into rich errors that include the failing status code and payload text.',
+      'Convenience helpers expose GET, POST, PUT, and DELETE while keeping the real network contract in one place.',
     ],
     tips: [
-      'Centralize HTTP behavior so retries, auth, and logging stay consistent.',
-      'Throw rich errors that preserve the failing status code and payload.',
-      'Normalize the base URL once in the constructor instead of every request.',
-      'Keep body serialization in one place to avoid inconsistent APIs.',
+      'Centralize transport logic so auth, retries, and logging can be added in one layer.',
+      'Throw rich errors early so callers have enough context to decide whether to retry or surface the problem.',
+      'Normalize the base URL once in the constructor instead of on every request.',
+      'Keep body serialization in the transport layer to avoid inconsistent call sites.',
     ],
     complexity: {
       level: 'Medium',
@@ -336,32 +768,32 @@ function apiClientOutput() {
       pattern: 'Service Wrapper',
       paradigm: 'Async / Await',
     },
-    preview: {
-      kind: 'note',
-      title: 'Code-first output',
-      body: 'REST clients do not have a meaningful live UI preview here, so the response focuses on the implementation structure.',
-    },
+    preview: createNotePreview(
+      'Code-first output',
+      'REST clients are better validated through the code contract than a visual sandbox, so this response focuses on the implementation details.',
+    ),
   });
 }
 
 function sortingOutput() {
   return createOutput({
     title: 'Merge Sort',
-    filename: 'merge-sort.js',
-    language: 'JavaScript',
-    code: MERGE_SORT_CODE,
-    explanation: 'Merge sort recursively splits the input into smaller halves and then merges those sorted halves back together in linear time per merge pass.',
+    summary: 'A classic divide-and-conquer implementation with a clean merge helper.',
+    files: [
+      createFile('merge-sort.js', 'JavaScript', MERGE_SORT_CODE, true),
+    ],
+    explanation: 'Merge sort recursively splits the input into smaller halves and then merges those sorted halves back together, producing predictable O(n log n) runtime at the cost of extra memory for the merged output.',
     steps: [
-      'The array is divided around its midpoint until single-item subarrays remain.',
-      'Each recursion level returns a sorted left half and a sorted right half.',
-      'merge() walks both halves with two pointers and builds the sorted output.',
-      'Any remaining tail elements are appended once one side is exhausted.',
+      'The array is divided around its midpoint until only one-element subarrays remain.',
+      'Each recursive call returns a sorted left half and a sorted right half.',
+      'merge() advances two pointers and emits the smaller next value into the output array.',
+      'Any remaining tail values are appended once one side is exhausted.',
     ],
     tips: [
-      'Use merge sort when predictable O(n log n) performance matters more than in-place mutation.',
-      'Keep the merge helper isolated so the recursive flow stays readable.',
-      'Think in terms of sorted subproblems rather than swapping adjacent values.',
-      'For very large inputs, watch the recursion depth and allocation costs.',
+      'Use merge sort when predictable runtime matters more than in-place mutation.',
+      'Keep the merge helper isolated so the recursive flow stays easy to read.',
+      'Reason about sorted subproblems instead of adjacent swaps.',
+      'Watch recursion depth and allocation pressure if you scale this pattern up to very large inputs.',
     ],
     complexity: {
       level: 'Medium',
@@ -370,11 +802,10 @@ function sortingOutput() {
       pattern: 'Divide and Conquer',
       paradigm: 'Recursion',
     },
-    preview: {
-      kind: 'note',
-      title: 'Algorithm output',
-      body: 'Sorting algorithms are best explained through the code and step breakdown rather than a static UI preview.',
-    },
+    preview: createNotePreview(
+      'Algorithm output',
+      'Algorithms like merge sort benefit more from the step breakdown and code walkthrough than from a static visual preview.',
+    ),
   });
 }
 
@@ -394,21 +825,22 @@ function genericOutput(message) {
 
   return createOutput({
     title: 'Implementation Starter',
-    filename: 'feature-plan.js',
-    language: 'JavaScript',
-    code,
-    explanation: 'This fallback response turns the request into a concrete implementation outline so the UI still returns structured output even when the prompt does not match one of the curated templates.',
+    summary: 'A structured implementation outline that keeps the sandbox useful when a request does not map cleanly to a browser preview template.',
+    files: [
+      createFile('feature-plan.js', 'JavaScript', code, true),
+    ],
+    explanation: 'This fallback response turns the request into a concrete implementation outline so the sandbox still returns a stored artifact with code, reasoning, and a predictable backend contract.',
     steps: [
-      'Capture the task description as a stable requirement.',
+      'Capture the task description as an explicit requirement.',
       'List the minimal goals the implementation has to satisfy.',
-      'Build the happy path before optional enhancements.',
-      'Add validation and integration details after the core logic is solid.',
+      'Build the happy path before optional abstractions.',
+      'Add validation and integration details once the core path is solid.',
     ],
     tips: [
       'Define the contract before writing code.',
-      'Prefer a thin first version over a speculative abstraction.',
+      'Prefer a thin first version over speculative abstraction.',
       'Add failure handling deliberately instead of scattering guards everywhere.',
-      'Use the outline as the basis for a more specific implementation pass.',
+      'Use the outline as a bridge into a more specific implementation pass.',
     ],
     complexity: {
       level: 'Low',
@@ -417,11 +849,10 @@ function genericOutput(message) {
       pattern: 'Feature Planning',
       paradigm: 'Structured Scaffolding',
     },
-    preview: {
-      kind: 'note',
-      title: 'Planning output',
-      body: 'This request was mapped to a structured implementation outline instead of a live preview widget.',
-    },
+    preview: createNotePreview(
+      'Planning output',
+      'This request was mapped to a concrete implementation outline rather than a live browser preview.',
+    ),
   });
 }
 
@@ -430,34 +861,34 @@ function selectOutput(message) {
 
   if (normalized.includes('calculator')) {
     return {
-      reply: 'I generated a keyboard-enabled calculator implementation and mapped the important state transitions into the explanation tab.',
+      reply: 'I generated a keyboard-enabled calculator and attached a real preview payload so the code, explanation, and running UI stay aligned.',
       output: calculatorOutput(),
     };
   }
 
   if (normalized.includes('todo')) {
     return {
-      reply: 'I built a small todo app structure with a single source of truth for items and clean add, toggle, and delete flows.',
+      reply: 'I built a working todo app artifact with delegated events and a live preview that matches the returned files.',
       output: todoOutput(),
     };
   }
 
   if (normalized.includes('rest api') || normalized.includes('api client')) {
     return {
-      reply: 'I returned a reusable REST client wrapper so the fetch logic, error handling, and JSON parsing live in one place.',
+      reply: 'I returned a reusable REST client wrapper with the transport logic centralized into one request layer.',
       output: apiClientOutput(),
     };
   }
 
   if (normalized.includes('sort')) {
     return {
-      reply: 'I used merge sort here because it is a clean example of divide-and-conquer with predictable runtime.',
+      reply: 'I used merge sort here because it is a compact example of divide-and-conquer with predictable runtime.',
       output: sortingOutput(),
     };
   }
 
   return {
-    reply: 'I mapped your request into a concrete implementation starter so the project still returns structured output through the backend.',
+    reply: 'I mapped your request into a structured implementation artifact so the backend still returns code, explanation, and preview metadata through one stable contract.',
     output: genericOutput(message),
   };
 }

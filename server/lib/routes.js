@@ -18,6 +18,8 @@ const { createHttpError } = require('./errors');
 
 async function routeRequest({ method, pathname, headers = {}, body = {} }) {
   if (method === 'GET' && pathname === '/api/health') {
+    const config = getConfig();
+
     return {
       statusCode: 200,
       body: {
@@ -25,7 +27,7 @@ async function routeRequest({ method, pathname, headers = {}, body = {} }) {
         service: 'fablabcode-backend',
         timestamp: new Date().toISOString(),
         storageMode: getStorageMode(),
-        aiMode: getConfig().openAiApiKey ? 'openai' : 'fallback',
+        aiMode: config.resolvedAiProvider,
         deployment: 'vercel-compatible',
       },
     };
