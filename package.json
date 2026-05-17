@@ -4,14 +4,17 @@
   "private": true,
   "description": "FAB-LabCode with a built-in Node backend for AI and G-code APIs.",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "node --test"
+    "server": "node --watch server.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "lucide-react": "^1.16.0",
     "pg": "^8.20.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"

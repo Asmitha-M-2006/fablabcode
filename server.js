@@ -13,11 +13,7 @@ const {
 const { routeRequest } = require('./server/lib/routes');
 
 const ROOT_DIR = __dirname;
-const PUBLIC_FILES = new Set([
-  '/index.html',
-  '/style.css',
-  '/script.js',
-]);
+const DIST_DIR = path.join(ROOT_DIR, 'dist');
 
 function createServer() {
   return http.createServer(async (req, res) => {
@@ -57,25 +53,24 @@ async function serveStatic(req, res, pathname) {
     return;
   }
 
-  const normalizedPath = pathname === '/' ? '/index.html' : pathname;
+  let normalizedPath = pathname === '/' ? '/index.html' : pathname;
+  let filePath = path.join(DIST_DIR, normalizedPath);
 
-  if (!PUBLIC_FILES.has(normalizedPath)) {
-    sendError(res, 404, 'Not found');
-    return;
+  try {
+    // Check if file exists
+    await fs.access(filePath);
+  } catch (error) {
+    // If not found, serve index.html for SPA routing
+    normalizedPath = '/index.html';
+    filePath = path.join(DIST_DIR, normalizedPath);
   }
 
-  const filePath = path.join(ROOT_DIR, normalizedPath);
   let fileContents;
-
   try {
     fileContents = await fs.readFile(filePath);
   } catch (error) {
-    if (error.code === 'ENOENT') {
-      sendError(res, 404, 'Not found');
-      return;
-    }
-
-    throw error;
+    sendError(res, 404, 'Not found');
+    return;
   }
 
   res.writeHead(200, {
