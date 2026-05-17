@@ -7,7 +7,7 @@ FAB-LabCode is a browser-based workspace for two adjacent jobs:
 1. AI-assisted software prototyping in an interactive sandbox
 2. Natural-language to G-code generation for fabrication workflows
 
-The app is deliberately lightweight: plain HTML, CSS, and JavaScript on the frontend, with a small Node.js backend that serves the UI, handles auth, stores chat history, and returns structured AI/G-code responses.
+The app is deliberately lightweight: plain HTML, CSS, and JavaScript on the frontend, with a small Node.js backend that serves the UI, stores shared chat history, and returns structured AI/G-code responses.
 
 ## Core Experience
 
@@ -52,7 +52,7 @@ If both are configured, the backend defaults to OpenAI unless `AI_PROVIDER=gemin
 
 ### Storage Modes
 
-- `DATABASE_URL` set: users, sessions, and chat history persist in PostgreSQL
+- `DATABASE_URL` set: the shared workspace chat history persists in PostgreSQL
 - `DATABASE_URL` missing: the app falls back to in-memory storage for local development and tests
 
 ## Audience
@@ -67,18 +67,16 @@ If both are configured, the backend defaults to OpenAI unless `AI_PROVIDER=gemin
 ### Implemented
 
 - local Node server plus Vercel-compatible API handlers
-- signup, login, logout, and bearer-token auth
-- per-user chat history storage
+- shared chat history without login gates
 - backend-driven AI artifact schema with files + live preview payloads
 - simultaneous preview/code/explanation rendering in the sandbox UI
 - server-side G-code generation with client-side visualization
-- integration tests covering health, auth, chat persistence, and G-code generation
+- integration tests covering health, chat persistence, and G-code generation
 
 ### Still Needed For Production-Grade Usage
 
 - a real provider key such as `GEMINI_API_KEY` or `OPENAI_API_KEY` for non-template AI output
-- a real `DATABASE_URL` for persistent multi-session storage
-- a non-default `SESSION_SECRET`
+- a real `DATABASE_URL` for persistent shared history
 - broader prompt coverage for more UI/app archetypes if you want the fallback mode to behave like a wider real-AI demo
 
 ## Near-Term Priorities

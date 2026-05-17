@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { createServer } = require('../../server');
+const { resetConfigState } = require('../lib/config');
 const { resetMemoryState } = require('../lib/repository');
 
 let server;
@@ -16,8 +17,14 @@ async function requestJson(path, options = {}) {
 }
 
 test.before(async () => {
+  process.env.FABLABCODE_SKIP_DOTENV = '1';
+  delete process.env.AI_PROVIDER;
   delete process.env.DATABASE_URL;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_MODEL;
   delete process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_MODEL;
+  resetConfigState();
   resetMemoryState();
 
   server = createServer();
@@ -30,6 +37,8 @@ test.after(async () => {
   await new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
+  delete process.env.FABLABCODE_SKIP_DOTENV;
+  resetConfigState();
 });
 
 test('GET /api/health returns server status', async () => {
@@ -41,60 +50,24 @@ test('GET /api/health returns server status', async () => {
   assert.equal(payload.aiMode, 'fallback');
 });
 
-test('auth flow supports signup, me, and logout', async () => {
-  const signup = await requestJson('/api/auth/signup', {
+test('removed auth routes now return 404', async () => {
+  const { response, payload } = await requestJson('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      name: 'Atul',
       email: 'atul@example.com',
       password: 'supersecure123',
     }),
   });
 
-  assert.equal(signup.response.status, 201);
-  assert.ok(signup.payload.token);
-  assert.equal(signup.payload.user.email, 'atul@example.com');
-
-  const me = await requestJson('/api/auth/me', {
-    headers: {
-      'Authorization': `Bearer ${signup.payload.token}`,
-    },
-  });
-
-  assert.equal(me.response.status, 200);
-  assert.equal(me.payload.user.name, 'Atul');
-
-  const logout = await requestJson('/api/auth/logout', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${signup.payload.token}`,
-    },
-  });
-
-  assert.equal(logout.response.status, 200);
-  assert.equal(logout.payload.success, true);
+  assert.equal(response.status, 404);
+  assert.equal(payload.error.message, 'API route not found');
 });
 
-test('chat flow persists history for authenticated users', async () => {
-  const signup = await requestJson('/api/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: 'History User',
-      email: 'history@example.com',
-      password: 'anothersecure123',
-    }),
-  });
-
-  const token = signup.payload.token;
-
+test('chat flow persists shared history without authentication', async () => {
   const chat = await requestJson('/api/chat', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: 'Build me a JavaScript calculator with keyboard support',
     }),
@@ -108,11 +81,7 @@ test('chat flow persists history for authenticated users', async () => {
   assert.match(chat.payload.output.preview.markup, /calc-shell/);
   assert.match(chat.payload.output.preview.script, /new Calculator/);
 
-  const history = await requestJson('/api/chat/history', {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  const history = await requestJson('/api/chat/history');
 
   assert.equal(history.response.status, 200);
   assert.equal(history.payload.messages.length, 2);
@@ -124,14 +93,28 @@ test('chat flow persists history for authenticated users', async () => {
 
   const clear = await requestJson('/api/chat/history', {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
   });
 
   assert.equal(clear.response.status, 200);
   assert.equal(clear.payload.success, true);
   assert.equal(clear.payload.deleted, 2);
+});
+
+test('timer prompts return a runnable fallback stopwatch artifact', async () => {
+  const chat = await requestJson('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: 'make me a timer',
+    }),
+  });
+
+  assert.equal(chat.response.status, 200);
+  assert.match(chat.payload.reply, /timer|stopwatch/i);
+  assert.equal(chat.payload.output.filename, 'timer.js');
+  assert.equal(chat.payload.output.preview.mode, 'live');
+  assert.match(chat.payload.output.preview.markup, /timer-display/);
+  assert.match(chat.payload.output.preview.script, /new Stopwatch/);
 });
 
 test('POST /api/gcode/generate returns structured G-code', async () => {

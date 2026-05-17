@@ -20,13 +20,13 @@ For auto-reload during development:
 npm run dev
 ```
 
-To enable authenticated chat with a real model, provide env vars through your shell or a local `.env` / `.env.local` file:
+To enable real model output or PostgreSQL-backed shared chat history, provide env vars through your shell or a local `.env` / `.env.local` file:
 
 ```bash
 AI_PROVIDER=gemini
+AI_REQUEST_TIMEOUT_MS=15000
 GEMINI_API_KEY=your_gemini_key
 DATABASE_URL=your_postgres_url
-SESSION_SECRET=your_random_secret
 ```
 
 ## Test
@@ -39,6 +39,8 @@ npm test
 
 - `GET /api/health` returns backend status
 - `POST /api/chat` returns a structured AI sandbox response
+- `GET /api/chat/history` returns shared sandbox history
+- `DELETE /api/chat/history` clears shared sandbox history
 - `POST /api/gcode/generate` returns generated G-code plus metadata for rendering
 
 ## Project structure

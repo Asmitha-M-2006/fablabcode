@@ -1,12 +1,11 @@
 /* ===================================================
    FAB-LabCode — script.js
-   Vanilla JS frontend backed by auth + chat APIs
+   Vanilla JS frontend backed by local chat + g-code APIs
    =================================================== */
 
 'use strict';
 
 const API_BASE = '/api';
-const AUTH_TOKEN_KEY = 'fab_auth_token';
 
 let toastTimer = null;
 let currentGcodeData = null;
@@ -14,13 +13,7 @@ let currentAiOutput = null;
 let defaultAiOutput = null;
 let currentAiFiles = [];
 let currentAiFileIndex = 0;
-let chatHistory = [];
 let calcState = { current: '', prev: null, op: null, justEvaluated: false };
-let authMode = 'login';
-let authState = {
-  token: '',
-  user: null,
-};
 
 /* ================================================
    MODE SWITCHER
@@ -58,20 +51,10 @@ function showToast(message, duration = 2400) {
 /* ================================================
    API
 ================================================ */
-function getAuthHeaders() {
-  return authState.token
-    ? { Authorization: `Bearer ${authState.token}` }
-    : {};
-}
-
-async function requestJson(path, options = {}, { auth = false } = {}) {
+async function requestJson(path, options = {}) {
   const headers = {
     ...(options.headers || {}),
   };
-
-  if (auth) {
-    Object.assign(headers, getAuthHeaders());
-  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -111,190 +94,28 @@ function deleteJson(path, options = {}) {
 }
 
 /* ================================================
-   AUTH
-================================================ */
-function openAuthModal(mode = 'login') {
-  setAuthMode(mode);
-  document.getElementById('auth-modal-backdrop').style.display = 'flex';
-  document.getElementById('auth-error').textContent = '';
-  setTimeout(() => {
-    const target = mode === 'signup'
-      ? document.getElementById('auth-name')
-      : document.getElementById('auth-email');
-    target?.focus();
-  }, 10);
-}
-
-function closeAuthModal(event) {
-  if (event && event.target !== document.getElementById('auth-modal-backdrop')) {
-    return;
-  }
-
-  document.getElementById('auth-modal-backdrop').style.display = 'none';
-  document.getElementById('auth-error').textContent = '';
-}
-
-function setAuthMode(mode) {
-  authMode = mode;
-  const isSignup = mode === 'signup';
-
-  document.getElementById('auth-tab-login').classList.toggle('active', !isSignup);
-  document.getElementById('auth-tab-signup').classList.toggle('active', isSignup);
-  document.getElementById('auth-name-field').style.display = isSignup ? 'flex' : 'none';
-  document.getElementById('auth-modal-title').textContent = isSignup
-    ? 'Create your FAB-LabCode account'
-    : 'Log in to FAB-LabCode';
-  document.getElementById('auth-submit-btn').textContent = isSignup ? 'Create account' : 'Log in';
-  document.getElementById('auth-password').setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
-  document.getElementById('auth-error').textContent = '';
-}
-
-function setAuthBusy(isBusy) {
-  const submitButton = document.getElementById('auth-submit-btn');
-  submitButton.disabled = isBusy;
-}
-
-function storeAuthToken(token) {
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
-  authState.token = token;
-}
-
-function clearStoredAuthToken() {
-  localStorage.removeItem(AUTH_TOKEN_KEY);
-  authState.token = '';
-}
-
-function updateAuthUi() {
-  const chip = document.getElementById('auth-user-chip');
-  const loginButton = document.getElementById('auth-login-btn');
-  const signupButton = document.getElementById('auth-signup-btn');
-  const logoutButton = document.getElementById('auth-logout-btn');
-
-  if (authState.user) {
-    chip.textContent = authState.user.name;
-    chip.style.display = 'inline-flex';
-    loginButton.style.display = 'none';
-    signupButton.style.display = 'none';
-    logoutButton.style.display = 'inline-flex';
-  } else {
-    chip.textContent = '';
-    chip.style.display = 'none';
-    loginButton.style.display = 'inline-flex';
-    signupButton.style.display = 'inline-flex';
-    logoutButton.style.display = 'none';
-  }
-}
-
-async function submitAuthForm(event) {
-  event.preventDefault();
-
-  const payload = {
-    email: document.getElementById('auth-email').value.trim(),
-    password: document.getElementById('auth-password').value,
-  };
-
-  if (authMode === 'signup') {
-    payload.name = document.getElementById('auth-name').value.trim();
-  }
-
-  setAuthBusy(true);
-  document.getElementById('auth-error').textContent = '';
-
-  try {
-    const result = await postJson(`/auth/${authMode}`, payload);
-    storeAuthToken(result.token);
-    authState.user = result.user;
-    updateAuthUi();
-    closeAuthModal();
-    document.getElementById('auth-form').reset();
-    await loadChatHistory();
-    showToast(authMode === 'signup' ? 'Account created' : 'Logged in');
-  } catch (error) {
-    document.getElementById('auth-error').textContent = error.message;
-  } finally {
-    setAuthBusy(false);
-  }
-}
-
-async function hydrateSession() {
-  const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
-
-  if (!token) {
-    renderSignedOutChatState();
-    updateAuthUi();
-    return;
-  }
-
-  authState.token = token;
-
-  try {
-    const result = await getJson('/auth/me', { auth: true });
-    authState.user = result.user;
-    updateAuthUi();
-    await loadChatHistory();
-  } catch {
-    authState.user = null;
-    clearStoredAuthToken();
-    updateAuthUi();
-    renderSignedOutChatState();
-  }
-}
-
-async function logout() {
-  try {
-    if (authState.token) {
-      await postJson('/auth/logout', {}, { auth: true });
-    }
-  } catch {
-    // Logout should still clear client state even if the request fails.
-  }
-
-  authState.user = null;
-  clearStoredAuthToken();
-  updateAuthUi();
-  renderSignedOutChatState();
-  renderAiOutput(defaultAiOutput);
-  showToast('Logged out');
-}
-
-/* ================================================
    AI SANDBOX — CHAT
 ================================================ */
-function renderSignedOutChatState() {
+function renderEmptyChatState() {
   const container = document.getElementById('chat-messages');
   container.innerHTML = '';
-  chatHistory = [];
-  appendBubble('Log in to use the real AI backend and keep your chat history in PostgreSQL.', 'ai');
-}
-
-function renderEmptyAuthenticatedChatState() {
-  const container = document.getElementById('chat-messages');
-  container.innerHTML = '';
-  chatHistory = [];
-  appendBubble(`You are signed in${authState.user ? ` as ${authState.user.name}` : ''}. Ask me to build code, explain an algorithm, or debug an issue.`, 'ai');
+  appendBubble('The AI sandbox is ready. Ask me to build code, explain an algorithm, or debug an issue.', 'ai');
 }
 
 async function loadChatHistory() {
-  if (!authState.token) {
-    renderSignedOutChatState();
-    return;
-  }
-
-  const result = await getJson('/chat/history', { auth: true });
+  const result = await getJson('/chat/history');
   const messages = Array.isArray(result.messages) ? result.messages : [];
   const container = document.getElementById('chat-messages');
   container.innerHTML = '';
-  chatHistory = [];
 
   if (messages.length === 0) {
-    renderEmptyAuthenticatedChatState();
+    renderEmptyChatState();
     renderAiOutput(defaultAiOutput);
     return;
   }
 
   messages.forEach((message) => {
     appendBubble(message.content, message.role === 'assistant' ? 'ai' : 'user', message.createdAt);
-    chatHistory.push({ role: message.role, content: message.content });
   });
 
   const latestArtifact = [...messages].reverse().find((message) => (
@@ -318,14 +139,7 @@ async function sendMessage() {
     return;
   }
 
-  if (!authState.token) {
-    openAuthModal('login');
-    showToast('Log in to use the AI sandbox');
-    return;
-  }
-
   appendBubble(message, 'user');
-  chatHistory.push({ role: 'user', content: message });
 
   input.value = '';
   autoResize(input);
@@ -334,14 +148,13 @@ async function sendMessage() {
   const typingId = showTyping();
 
   try {
-    const payload = await postJson('/chat', { message }, { auth: true });
+    const payload = await postJson('/chat', { message });
     removeTyping(typingId);
     appendBubble(payload.reply, 'ai', payload.meta?.generatedAt);
-    chatHistory.push({ role: 'assistant', content: payload.reply });
     renderAiOutput(payload.output);
   } catch (error) {
     removeTyping(typingId);
-    appendBubble('The backend request failed. Check your auth session and environment variables.', 'ai');
+    appendBubble('The backend request failed. Check your server and model configuration.', 'ai');
     showToast(error.message);
   } finally {
     setChatBusy(false);
@@ -427,14 +240,9 @@ function removeTyping(id) {
 }
 
 async function clearChat() {
-  if (!authState.token) {
-    renderSignedOutChatState();
-    return;
-  }
-
   try {
-    await deleteJson('/chat/history', { auth: true });
-    renderEmptyAuthenticatedChatState();
+    await deleteJson('/chat/history');
+    renderEmptyChatState();
     renderAiOutput(defaultAiOutput);
     showToast('Chat history cleared');
   } catch (error) {
@@ -1834,12 +1642,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   currentAiOutput = defaultAiOutput;
   renderAiOutput(defaultAiOutput);
   updateCharCount(document.getElementById('gcode-instruction'));
-  updateAuthUi();
-  renderSignedOutChatState();
+  renderEmptyChatState();
 
   await Promise.allSettled([
     generateGcode(),
-    hydrateSession(),
+    loadChatHistory(),
   ]);
 
   window.addEventListener('resize', () => {

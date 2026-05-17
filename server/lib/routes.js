@@ -4,12 +4,6 @@ const { getConfig } = require('./config');
 const { generateGcode } = require('./gcode-service');
 const { getStorageMode } = require('./repository');
 const {
-  loginUser,
-  logoutUser,
-  requireAuthenticatedUser,
-  signupUser,
-} = require('./auth-service');
-const {
   clearChatHistory,
   createChatReply,
   getChatHistory,
@@ -33,44 +27,8 @@ async function routeRequest({ method, pathname, headers = {}, body = {} }) {
     };
   }
 
-  if (method === 'POST' && pathname === '/api/auth/signup') {
-    const auth = await signupUser(body);
-    return {
-      statusCode: 201,
-      body: auth,
-    };
-  }
-
-  if (method === 'POST' && pathname === '/api/auth/login') {
-    const auth = await loginUser(body);
-    return {
-      statusCode: 200,
-      body: auth,
-    };
-  }
-
-  if (method === 'GET' && pathname === '/api/auth/me') {
-    const session = await requireAuthenticatedUser(headers);
-    return {
-      statusCode: 200,
-      body: {
-        user: session.user,
-      },
-    };
-  }
-
-  if (method === 'POST' && pathname === '/api/auth/logout') {
-    await logoutUser(headers);
-    return {
-      statusCode: 200,
-      body: { success: true },
-    };
-  }
-
   if (method === 'POST' && pathname === '/api/chat') {
-    const session = await requireAuthenticatedUser(headers);
     const payload = await createChatReply({
-      user: session.user,
       message: body.message,
     });
     return {
@@ -80,8 +38,7 @@ async function routeRequest({ method, pathname, headers = {}, body = {} }) {
   }
 
   if (method === 'GET' && pathname === '/api/chat/history') {
-    const session = await requireAuthenticatedUser(headers);
-    const history = await getChatHistory(session.user);
+    const history = await getChatHistory();
     return {
       statusCode: 200,
       body: {
@@ -91,8 +48,7 @@ async function routeRequest({ method, pathname, headers = {}, body = {} }) {
   }
 
   if (method === 'DELETE' && pathname === '/api/chat/history') {
-    const session = await requireAuthenticatedUser(headers);
-    const result = await clearChatHistory(session.user);
+    const result = await clearChatHistory();
     return {
       statusCode: 200,
       body: result,

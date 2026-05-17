@@ -4,9 +4,9 @@ const { generateAssistantReply } = require('./ai-assistant');
 const { generateGeminiAssistantReply } = require('./gemini-service');
 const { generateOpenAiAssistantReply } = require('./openai-service');
 const {
-  clearChatMessagesByUserId,
+  clearChatMessages,
   createChatMessage,
-  listChatMessagesByUserId,
+  listChatMessages,
 } = require('./repository');
 const { getConfig } = require('./config');
 const { createHttpError } = require('./errors');
@@ -21,36 +21,51 @@ function serializeHistoryMessage(message) {
   };
 }
 
-async function createChatReply({ user, message }) {
+async function generateProviderPayload({ provider, message, recentHistory }) {
+  if (provider === 'openai') {
+    return generateOpenAiAssistantReply({ message, history: recentHistory });
+  }
+
+  if (provider === 'gemini') {
+    return generateGeminiAssistantReply({ message, history: recentHistory });
+  }
+
+  return generateAssistantReply({ message, history: recentHistory });
+}
+
+async function createChatReply({ message }) {
   const trimmedMessage = String(message || '').trim();
 
   if (!trimmedMessage) {
     throw createHttpError(400, 'Message is required');
   }
 
-  const recentHistory = await listChatMessagesByUserId(user.id, 12);
+  const recentHistory = await listChatMessages(12);
   const config = getConfig();
-  let payload;
   let provider = config.resolvedAiProvider;
+  let payload;
+  let fallbackReason = '';
 
-  if (provider === 'openai') {
-    payload = await generateOpenAiAssistantReply({ message: trimmedMessage, history: recentHistory });
-  } else if (provider === 'gemini') {
-    payload = await generateGeminiAssistantReply({ message: trimmedMessage, history: recentHistory });
-  } else {
+  try {
+    payload = await generateProviderPayload({
+      provider,
+      message: trimmedMessage,
+      recentHistory,
+    });
+  } catch (error) {
+    console.error(`[chat-service] ${provider} provider failed, falling back to local artifact: ${error.message}`);
     provider = 'fallback';
+    fallbackReason = error.message;
     payload = generateAssistantReply({ message: trimmedMessage, history: recentHistory });
   }
 
   await createChatMessage({
-    userId: user.id,
     role: 'user',
     content: trimmedMessage,
     artifact: null,
   });
 
   await createChatMessage({
-    userId: user.id,
     role: 'assistant',
     content: payload.reply,
     artifact: payload.output,
@@ -59,19 +74,20 @@ async function createChatReply({ user, message }) {
   return {
     ...payload,
     meta: {
+      fallbackReason,
       provider,
       generatedAt: new Date().toISOString(),
     },
   };
 }
 
-async function getChatHistory(user, limit = 50) {
-  const messages = await listChatMessagesByUserId(user.id, limit);
+async function getChatHistory(limit = 50) {
+  const messages = await listChatMessages(limit);
   return messages.map(serializeHistoryMessage);
 }
 
-async function clearChatHistory(user) {
-  const deleted = await clearChatMessagesByUserId(user.id);
+async function clearChatHistory() {
+  const deleted = await clearChatMessages();
   return {
     success: true,
     deleted,

@@ -46,44 +46,55 @@ function extractGeminiText(payload) {
 }
 
 async function generateGeminiAssistantReply({ message, history }) {
-  const { geminiApiKey, geminiModel } = getConfig();
+  const { geminiApiKey, geminiModel, aiRequestTimeoutMs } = getConfig();
 
   if (!geminiApiKey) {
     throw createHttpError(503, 'GEMINI_API_KEY is not configured');
   }
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'x-goog-api-key': geminiApiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{
-          text: [
-            'You are FAB-LabCode AI, a code-focused assistant inside a browser-based fabrication lab tool.',
-            'Return valid JSON only.',
-            'The "reply" field is the short assistant bubble shown in chat.',
-            'The "output" field must describe one concrete artifact that the frontend can render directly.',
-            'Always return at least one file in output.files. Mark exactly one file as primary.',
-            'Set output.code to the primary file content for quick inline viewing.',
-            'Use output.preview.mode="live" only when the request is suitable for a browser preview with plain HTML, CSS, and JavaScript.',
-            'For live previews, output.preview.markup must contain body markup only, output.preview.styles must contain plain CSS, and output.preview.script must contain JavaScript that runs without build tools.',
-            'For non-visual or backend-only requests, use output.preview.mode="note" and leave markup/styles/script empty.',
-            'Prefer practical, production-leaning code over pseudocode.',
-            'Do not wrap the files in Markdown fences.',
-          ].join(' '),
-        }],
+  let response;
+
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': geminiApiKey,
+        'Content-Type': 'application/json',
       },
-      contents: buildGeminiContents(history, message),
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseJsonSchema: RESPONSE_SCHEMA,
-        maxOutputTokens: 5000,
-      },
-    }),
-  });
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{
+            text: [
+              'You are FAB-LabCode AI, a code-focused assistant inside a browser-based fabrication lab tool.',
+              'Return valid JSON only.',
+              'The "reply" field is the short assistant bubble shown in chat.',
+              'The "output" field must describe one concrete artifact that the frontend can render directly.',
+              'Always return at least one file in output.files. Mark exactly one file as primary.',
+              'Set output.code to the primary file content for quick inline viewing.',
+              'Use output.preview.mode="live" only when the request is suitable for a browser preview with plain HTML, CSS, and JavaScript.',
+              'For live previews, output.preview.markup must contain body markup only, output.preview.styles must contain plain CSS, and output.preview.script must contain JavaScript that runs without build tools.',
+              'For non-visual or backend-only requests, use output.preview.mode="note" and leave markup/styles/script empty.',
+              'Prefer practical, production-leaning code over pseudocode.',
+              'Do not wrap the files in Markdown fences.',
+            ].join(' '),
+          }],
+        },
+        contents: buildGeminiContents(history, message),
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseJsonSchema: RESPONSE_SCHEMA,
+          maxOutputTokens: 5000,
+        },
+      }),
+      signal: AbortSignal.timeout(aiRequestTimeoutMs),
+    });
+  } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      throw createHttpError(504, `Gemini request timed out after ${aiRequestTimeoutMs} ms`);
+    }
+
+    throw error;
+  }
 
   const payload = await response.json();
 

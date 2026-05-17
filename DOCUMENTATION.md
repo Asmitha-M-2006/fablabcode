@@ -6,7 +6,7 @@ FAB-LabCode has one static frontend and one small Node backend.
 
 - `index.html`, `style.css`, `script.js`: the full browser UI
 - `server.js`: local HTTP entrypoint for static files + `/api/*`
-- `server/lib/*`: auth, storage, AI, G-code, routing, and HTTP helpers
+- `server/lib/*`: storage, AI, G-code, routing, and HTTP helpers
 - `api/*.mjs`: Vercel-compatible route adapters that delegate to the same backend logic
 
 The important design constraint is that the frontend should render backend artifacts, not invent them. The AI sandbox now follows that rule.
@@ -20,16 +20,10 @@ fablabcode/
 │   ├── health.mjs
 │   ├── chat.mjs
 │   ├── chat/history.mjs
-│   ├── gcode/generate.mjs
-│   └── auth/
-│       ├── signup.mjs
-│       ├── login.mjs
-│       ├── logout.mjs
-│       └── me.mjs
+│   └── gcode/generate.mjs
 ├── server/
 │   ├── lib/
 │   │   ├── ai-assistant.js
-│   │   ├── auth-service.js
 │   │   ├── chat-service.js
 │   │   ├── config.js
 │   │   ├── errors.js
@@ -38,7 +32,6 @@ fablabcode/
 │   │   ├── openai-service.js
 │   │   ├── repository.js
 │   │   ├── routes.js
-│   │   ├── security.js
 │   │   └── vercel-handler.js
 │   └── tests/
 │       └── integration.test.js
@@ -57,13 +50,12 @@ fablabcode/
 | Variable | Required | Purpose |
 |---|---|---|
 | `AI_PROVIDER` | No | Explicitly choose `gemini` or `openai` when both are configured |
+| `AI_REQUEST_TIMEOUT_MS` | No | Timeout for provider requests before falling back locally, defaults to `15000` |
 | `GEMINI_API_KEY` | No | Enables Gemini-backed chat output |
 | `GEMINI_MODEL` | No | Overrides the default Gemini model (`gemini-2.5-flash`) |
 | `OPENAI_API_KEY` | No | Enables real OpenAI-backed chat output |
 | `OPENAI_MODEL` | No | Overrides the default chat model (`gpt-5.5`) |
 | `DATABASE_URL` | No | Enables PostgreSQL persistence |
-| `SESSION_SECRET` | No, but should be set in real deployments | Salts session token hashing |
-| `SESSION_TTL_DAYS` | No | Session lifetime, defaults to `30` |
 | `PORT` | No | Local server port, defaults to `3000` |
 
 ## Backend
@@ -89,33 +81,12 @@ That means the local server and the hosted API shape stay aligned.
 | Method | Route | Behavior |
 |---|---|---|
 | `GET` | `/api/health` | health + runtime mode details |
-| `POST` | `/api/auth/signup` | create user + session token |
-| `POST` | `/api/auth/login` | authenticate + session token |
-| `GET` | `/api/auth/me` | validate bearer token and return current user |
-| `POST` | `/api/auth/logout` | invalidate current session |
-| `POST` | `/api/chat` | authenticated AI sandbox response |
-| `GET` | `/api/chat/history` | authenticated chat history |
-| `DELETE` | `/api/chat/history` | clear user chat history |
+| `POST` | `/api/chat` | shared AI sandbox response |
+| `GET` | `/api/chat/history` | shared chat history |
+| `DELETE` | `/api/chat/history` | clear shared chat history |
 | `POST` | `/api/gcode/generate` | generate structured G-code payload |
 
-## Auth and Storage
-
-### Auth
-
-`server/lib/auth-service.js`:
-
-- validates signup/login payloads
-- hashes passwords with `scrypt`
-- generates random session tokens
-- stores only hashed session tokens
-- expects `Authorization: Bearer <token>` on protected routes
-
-`server/lib/security.js` provides:
-
-- password hashing
-- password verification
-- session token generation
-- session token hashing using `SESSION_SECRET`
+## Storage
 
 ### Repository Layer
 
@@ -127,17 +98,16 @@ That means the local server and the hosted API shape stay aligned.
 When PostgreSQL is enabled, it auto-creates:
 
 - `users`
-- `sessions`
 - `chat_messages`
 
-The `chat_messages.artifact` column stores the full structured AI artifact as JSONB.
+The `chat_messages.artifact` column stores the full structured AI artifact as JSONB. Chat history is shared across the local workspace, and PostgreSQL mode uses a single internal workspace record to keep schema compatibility with older databases.
 
 ## AI Sandbox Contract
 
 ### Chat Flow
 
 1. Frontend calls `POST /api/chat`
-2. `chat-service.js` loads recent history
+2. `chat-service.js` loads recent shared history
 3. Backend chooses:
    - `gemini-service.js` if Gemini is the resolved provider
    - `openai-service.js` if `OPENAI_API_KEY` exists
@@ -312,8 +282,8 @@ The frontend remains responsible for:
 `server/tests/integration.test.js` covers:
 
 - health endpoint
-- signup/login/logout
-- authenticated chat persistence
+- removed auth routes returning `404`
+- shared chat persistence
 - live-preview artifact persistence for chat output
 - G-code generation
 
@@ -326,5 +296,5 @@ npm test
 ## Current Constraints
 
 - Without `GEMINI_API_KEY` or `OPENAI_API_KEY`, AI output is limited to curated fallback artifacts.
-- Without `DATABASE_URL`, auth and chat history are memory-only.
+- Without `DATABASE_URL`, chat history is memory-only.
 - The live preview contract is currently best for plain HTML/CSS/JavaScript results, not framework builds.

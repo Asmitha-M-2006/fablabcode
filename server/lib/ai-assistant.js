@@ -479,6 +479,141 @@ const TODO_CODE = `class TodoApp {
 
 new TodoApp('#todo-form', '#todo-input', '#todo-list', '#todo-count');`;
 
+const TIMER_MARKUP = `<main class="timer-shell">
+  <section class="timer-card">
+    <p>Simple stopwatch</p>
+    <h1 id="timer-display">00:00.0</h1>
+    <div class="timer-actions">
+      <button data-action="toggle">Start</button>
+      <button data-action="reset">Reset</button>
+    </div>
+  </section>
+</main>`;
+
+const TIMER_STYLES = `body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: Inter, system-ui, sans-serif;
+  background: radial-gradient(circle at top, #1e293b, #020617 72%);
+  color: #e2e8f0;
+}
+
+.timer-shell {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.timer-card {
+  width: min(100%, 320px);
+  padding: 28px;
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.45);
+  text-align: center;
+}
+
+.timer-card p {
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.timer-card h1 {
+  margin: 0 0 20px;
+  font-size: 56px;
+  line-height: 1;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.timer-actions button {
+  min-width: 110px;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: #0f172a;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+}
+
+.timer-actions button:last-child {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}`;
+
+const TIMER_CODE = `class Stopwatch {
+  constructor(displaySelector) {
+    this.display = document.querySelector(displaySelector);
+    this.toggleButton = document.querySelector('[data-action="toggle"]');
+    this.resetButton = document.querySelector('[data-action="reset"]');
+    this.startedAt = 0;
+    this.elapsed = 0;
+    this.frame = 0;
+    this.running = false;
+
+    this.toggleButton.addEventListener('click', () => this.toggle());
+    this.resetButton.addEventListener('click', () => this.reset());
+    this.render();
+  }
+
+  format(ms) {
+    const totalTenths = Math.floor(ms / 100);
+    const minutes = Math.floor(totalTenths / 600);
+    const seconds = Math.floor((totalTenths % 600) / 10);
+    const tenths = totalTenths % 10;
+    return \`\${String(minutes).padStart(2, '0')}:\${String(seconds).padStart(2, '0')}.\${tenths}\`;
+  }
+
+  tick() {
+    if (!this.running) return;
+    this.elapsed = performance.now() - this.startedAt;
+    this.render();
+    this.frame = requestAnimationFrame(() => this.tick());
+  }
+
+  toggle() {
+    if (this.running) {
+      this.running = false;
+      cancelAnimationFrame(this.frame);
+      this.toggleButton.textContent = 'Start';
+      return;
+    }
+
+    this.running = true;
+    this.startedAt = performance.now() - this.elapsed;
+    this.toggleButton.textContent = 'Pause';
+    this.tick();
+  }
+
+  reset() {
+    this.running = false;
+    cancelAnimationFrame(this.frame);
+    this.elapsed = 0;
+    this.toggleButton.textContent = 'Start';
+    this.render();
+  }
+
+  render() {
+    this.display.textContent = this.format(this.elapsed);
+  }
+}
+
+new Stopwatch('#timer-display');`;
+
 const API_CLIENT_CODE = `class ApiClient {
   constructor(baseUrl, defaultHeaders = {}) {
     this.baseUrl = baseUrl.replace(/\\/$/, '');
@@ -741,6 +876,57 @@ function todoOutput() {
   });
 }
 
+function timerOutput() {
+  return createOutput({
+    title: 'Browser Stopwatch',
+    summary: 'A compact stopwatch UI with start, pause, and reset behavior running directly in the preview sandbox.',
+    files: [
+      createFile('index.html', 'HTML', `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stopwatch</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    ${TIMER_MARKUP}
+    <script src="timer.js"></script>
+  </body>
+</html>`),
+      createFile('styles.css', 'CSS', TIMER_STYLES),
+      createFile('timer.js', 'JavaScript', TIMER_CODE, true),
+    ],
+    explanation: 'This stopwatch keeps only elapsed time and a running flag in memory. It uses `requestAnimationFrame` for smooth updates and derives the visible time from the difference between the current frame timestamp and the stored start time.',
+    steps: [
+      'Cache the display and button elements once when the stopwatch boots.',
+      'Start records the reference time and begins a frame loop that updates the elapsed duration.',
+      'Pause stops the frame loop without discarding elapsed time so the next start resumes cleanly.',
+      'Reset clears elapsed time, cancels any active frame loop, and restores the initial label state.',
+    ],
+    tips: [
+      'Use `requestAnimationFrame` for lightweight UI timing instead of stacking multiple intervals.',
+      'Derive the display from elapsed milliseconds instead of mutating the string directly.',
+      'Keep start and reset actions explicit so pause and resume logic stays easy to reason about.',
+    ],
+    complexity: {
+      level: 'Low',
+      time: 'O(1) per frame',
+      space: 'O(1)',
+      pattern: 'State Machine',
+      paradigm: 'DOM-driven UI',
+    },
+    preview: {
+      mode: 'live',
+      title: 'Interactive stopwatch',
+      body: 'A start, pause, and reset timer rendered from backend-provided HTML, CSS, and JavaScript.',
+      markup: TIMER_MARKUP,
+      styles: TIMER_STYLES,
+      script: TIMER_CODE,
+    },
+  });
+}
+
 function apiClientOutput() {
   return createOutput({
     title: 'REST API Client',
@@ -756,7 +942,7 @@ function apiClientOutput() {
       'Convenience helpers expose GET, POST, PUT, and DELETE while keeping the real network contract in one place.',
     ],
     tips: [
-      'Centralize transport logic so auth, retries, and logging can be added in one layer.',
+      'Centralize transport logic so retries and logging can be added in one layer.',
       'Throw rich errors early so callers have enough context to decide whether to retry or surface the problem.',
       'Normalize the base URL once in the constructor instead of on every request.',
       'Keep body serialization in the transport layer to avoid inconsistent call sites.',
@@ -870,6 +1056,13 @@ function selectOutput(message) {
     return {
       reply: 'I built a working todo app artifact with delegated events and a live preview that matches the returned files.',
       output: todoOutput(),
+    };
+  }
+
+  if (normalized.includes('timer') || normalized.includes('stopwatch')) {
+    return {
+      reply: 'I built a stopwatch-style timer with start, pause, and reset controls plus a live preview.',
+      output: timerOutput(),
     };
   }
 

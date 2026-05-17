@@ -10,6 +10,11 @@ function parsePositiveInt(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function shouldSkipDotEnv() {
+  const rawValue = String(process.env.FABLABCODE_SKIP_DOTENV || '').trim().toLowerCase();
+  return rawValue === '1' || rawValue === 'true';
+}
+
 function parseDotEnv(contents) {
   const values = {};
   const lines = String(contents || '').split(/\r?\n/);
@@ -60,13 +65,17 @@ function loadDotEnvFile(filename) {
 }
 
 function loadDotEnvOnce() {
-  if (dotEnvLoaded) {
+  if (dotEnvLoaded || shouldSkipDotEnv()) {
     return;
   }
 
   loadDotEnvFile('.env');
   loadDotEnvFile('.env.local');
   dotEnvLoaded = true;
+}
+
+function resetConfigState() {
+  dotEnvLoaded = false;
 }
 
 function resolveAiProvider(config) {
@@ -96,13 +105,12 @@ function getConfig() {
 
   const config = {
     aiProvider: process.env.AI_PROVIDER?.trim() || '',
+    aiRequestTimeoutMs: parsePositiveInt(process.env.AI_REQUEST_TIMEOUT_MS, 15000),
     databaseUrl: process.env.DATABASE_URL?.trim() || '',
     geminiApiKey: process.env.GEMINI_API_KEY?.trim() || '',
     geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
     openAiApiKey: process.env.OPENAI_API_KEY?.trim() || '',
     openAiModel: process.env.OPENAI_MODEL?.trim() || 'gpt-5.5',
-    sessionSecret: process.env.SESSION_SECRET?.trim() || 'dev-session-secret-change-me',
-    sessionTtlDays: parsePositiveInt(process.env.SESSION_TTL_DAYS, 30),
     nodeEnv: process.env.NODE_ENV || 'development',
   };
 
@@ -114,5 +122,6 @@ function getConfig() {
 
 module.exports = {
   getConfig,
+  resetConfigState,
   resolveAiProvider,
 };
