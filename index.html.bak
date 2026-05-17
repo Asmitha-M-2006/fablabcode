@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAB-LabCode</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="16" y="2" width="10" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+          <rect x="2" y="16" width="10" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+          <path d="M16 21 L22 16 L26 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <span class="brand-name">FAB-<span class="brand-accent">LabCode</span></span>
+    </div>
+    <div class="navbar-actions">
+      <div class="mode-toggle">
+        <button class="mode-btn" id="btn-sandbox" onclick="switchMode('sandbox')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+          </svg>
+          AI Sandbox
+        </button>
+        <button class="mode-btn active" id="btn-gcode" onclick="switchMode('gcode')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          </svg>
+          G-code Mode
+        </button>
+      </div>
+      <div class="workspace-badge">Local workspace</div>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content">
+
+    <!-- ========================================
+         AI SANDBOX MODE
+    ========================================= -->
+    <section class="mode-section" id="mode-sandbox" style="display:none;">
+      <div class="sandbox-layout">
+
+        <!-- LEFT: Chat Panel -->
+        <div class="panel chat-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+              AI Chat
+            </div>
+            <button class="btn-ghost btn-sm" id="clear-chat-btn" onclick="clearChat()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+              Clear
+            </button>
+          </div>
+
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-bubble ai">
+              <div class="bubble-avatar ai-avatar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+              </div>
+              <div class="bubble-content">
+                <p>Hello! I'm FAB-LabCode AI. I can help you generate code, explain algorithms, debug issues, or build projects. What would you like to create today?</p>
+                <span class="bubble-time">Just now</span>
+              </div>
+            </div>
+
+            <div class="chat-bubble user">
+              <div class="bubble-content">
+                <p>Build me a JavaScript calculator with keyboard support</p>
+                <span class="bubble-time">2 min ago</span>
+              </div>
+              <div class="bubble-avatar user-avatar">You</div>
+            </div>
+
+            <div class="chat-bubble ai">
+              <div class="bubble-avatar ai-avatar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                </svg>
+              </div>
+              <div class="bubble-content">
+                <p>Great choice! I've generated a fully functional calculator with:</p>
+                <ul>
+                  <li>Full keyboard support (0-9, operators, Enter, Backspace)</li>
+                  <li>Clean modern UI with smooth animations</li>
+                  <li>Error handling for division by zero</li>
+                  <li>History display showing previous operation</li>
+                </ul>
+                <p>Check the Code tab on the right to see the full implementation!</p>
+                <span class="bubble-time">1 min ago</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <div class="chat-suggestions">
+              <button class="suggestion-chip" onclick="usePrompt('Build a todo list app')">Todo list app</button>
+              <button class="suggestion-chip" onclick="usePrompt('Create a REST API client')">REST API client</button>
+              <button class="suggestion-chip" onclick="usePrompt('Write a sorting algorithm')">Sorting algorithm</button>
+            </div>
+            <div class="chat-input-row">
+              <textarea
+                id="chat-input"
+                class="chat-textarea"
+                placeholder="Ask me to build something, explain code, or debug an issue..."
+                rows="1"
+                onkeydown="handleChatKey(event)"
+                oninput="autoResize(this)"
+              ></textarea>
+              <button class="send-btn" id="chat-send-btn" onclick="sendMessage()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: AI Output Panel -->
+        <div class="panel output-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+              AI Output
+            </div>
+            <div class="output-actions">
+              <button class="btn-ghost btn-sm" onclick="copyCode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+              <button class="btn-ghost btn-sm" onclick="downloadCode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+            </div>
+          </div>
+
+          <div class="output-workspace">
+            <div class="tab-content active output-pane output-pane-code" id="tab-code">
+              <div class="pane-heading">
+                <span class="pane-kicker">Code</span>
+                <span class="pane-caption">Primary file and supporting source files from the backend artifact</span>
+              </div>
+
+              <div class="code-editor">
+                <div class="code-editor-header">
+                  <div class="editor-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                  </div>
+                  <span class="editor-filename" id="ai-editor-filename">calculator.js</span>
+                  <span class="editor-lang" id="ai-editor-language-label">JavaScript</span>
+                </div>
+                <div class="file-tab-strip" id="ai-file-tabs"></div>
+                <div class="code-block" id="code-output"><pre><code></code></pre></div>
+              </div>
+
+              <div class="output-meta">
+                <div class="meta-card">
+                  <span class="meta-label">Lines</span>
+                  <span class="meta-value" id="ai-lines">0</span>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Language</span>
+                  <span class="meta-value" id="ai-language">JavaScript</span>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Files</span>
+                  <span class="meta-value" id="ai-file-count">1</span>
+                </div>
+                <div class="meta-card">
+                  <span class="meta-label">Status</span>
+                  <span class="meta-value status-ok" id="ai-output-status">
+                    <span class="status-dot"></span> Ready
+                  </span>
+                </div>
+              </div>
+
+              <div class="tips-section">
+                <div class="tips-header">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Tips &amp; Best Practices
+                </div>
+                <ul class="tips-list" id="ai-tips"></ul>
+              </div>
+            </div>
+
+            <div class="tab-content active output-pane output-pane-preview" id="tab-preview">
+              <div class="pane-heading">
+                <span class="pane-kicker">Preview</span>
+                <span class="pane-caption" id="ai-preview-caption">Runnable browser sandbox rendered from the same backend artifact.</span>
+              </div>
+              <div class="preview-wrapper" id="ai-preview-body"></div>
+            </div>
+
+            <div class="tab-content active output-pane output-pane-explanation" id="tab-explanation">
+              <div class="pane-heading">
+                <span class="pane-kicker">Explanation</span>
+                <span class="pane-caption">Detailed reasoning, steps, and complexity summary</span>
+              </div>
+
+              <div class="explanation-content" id="ai-explanation-body">
+                <div class="explanation-card">
+                  <h3 class="expl-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/>
+                      <path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                      <path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/>
+                      <path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/>
+                      <path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/>
+                      <path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/>
+                      <path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/>
+                      <path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/>
+                    </svg>
+                    How it works
+                  </h3>
+                  <p class="explanation-summary" id="ai-summary-text"></p>
+                  <p id="ai-explanation-text"></p>
+                </div>
+
+                <div class="step-list" id="ai-step-list"></div>
+
+                <div class="complexity-grid">
+                  <div class="complexity-item">
+                    <span class="citem-label">Time Complexity</span>
+                    <span class="citem-value badge-green" id="ai-time-complexity">O(1)</span>
+                  </div>
+                  <div class="complexity-item">
+                    <span class="citem-label">Space Complexity</span>
+                    <span class="citem-value badge-green" id="ai-space-complexity">O(1)</span>
+                  </div>
+                  <div class="complexity-item">
+                    <span class="citem-label">Pattern</span>
+                    <span class="citem-value badge-blue" id="ai-pattern">State Machine</span>
+                  </div>
+                  <div class="complexity-item">
+                    <span class="citem-label">Paradigm</span>
+                    <span class="citem-value badge-purple" id="ai-paradigm">OOP / ES6</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================
+         G-CODE MODE
+    ========================================= -->
+    <section class="mode-section" id="mode-gcode">
+      <div class="gcode-layout">
+
+        <!-- LEFT: Input & Settings -->
+        <div class="panel gcode-input-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+              G-code Generator
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <p class="input-hint">Enter your instruction in simple text</p>
+            <div class="textarea-wrapper">
+              <textarea
+                id="gcode-instruction"
+                class="gcode-textarea"
+                placeholder="e.g. draw a square 10x10"
+                maxlength="200"
+                oninput="updateCharCount(this)"
+              >draw a square 10x10</textarea>
+              <span class="char-count" id="char-count">18 / 200</span>
+            </div>
+
+            <div class="examples-section">
+              <div class="section-label">Examples</div>
+              <div class="example-chips">
+                <button class="chip chip-active" onclick="setExample('draw a square 10x10', this)">draw a square 10x10</button>
+                <button class="chip" onclick="setExample('draw a rectangle 20x10', this)">draw a rectangle 20x10</button>
+                <button class="chip" onclick="setExample('draw a circle radius 10', this)">draw a circle radius 10</button>
+                <button class="chip" onclick="setExample('engrave HELLO', this)">engrave HELLO</button>
+                <button class="chip" onclick="setExample('triangle 15', this)">triangle 15</button>
+                <button class="chip" onclick="setExample('line from (0,0) to (20,0)', this)">line from (0,0) to (20,0)</button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <div class="section-label">Settings</div>
+              <div class="settings-grid">
+                <div class="setting-group">
+                  <label class="setting-label">Units</label>
+                  <select class="setting-select" id="units-select">
+                    <option value="mm">mm</option>
+                    <option value="inch">inch</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label class="setting-label">Feed Rate (F)</label>
+                  <div class="input-with-unit">
+                    <input type="number" class="setting-input" id="feed-rate" value="1000" min="100" max="5000" />
+                    <span class="unit-label">mm/min</span>
+                  </div>
+                </div>
+                <div class="setting-group">
+                  <label class="setting-label">Tool</label>
+                  <select class="setting-select" id="tool-select">
+                    <option>Pen (Drawing)</option>
+                    <option>End Mill 3mm</option>
+                    <option>V-Bit 60°</option>
+                    <option>Laser</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label class="setting-label">Safe Z</label>
+                  <div class="input-with-unit">
+                    <input type="number" class="setting-input" id="safe-z" value="2" min="0" max="20" />
+                    <span class="unit-label">mm</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-generate" id="generate-gcode-btn" onclick="generateGcode()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Generate G-code
+            </button>
+
+            <div class="status-bar" id="gcode-status">
+              <div class="status-indicator status-ready">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                Ready to generate
+              </div>
+              <span class="status-text">Enter an instruction and click generate.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Toolpath Preview -->
+        <div class="panel gcode-preview-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              Toolpath Preview
+            </div>
+            <div class="view-toggle">
+              <span class="view-label">View:</span>
+              <button class="view-btn active" id="btn-2d" onclick="setView('2d', this)">2D</button>
+              <button class="view-btn" id="btn-3d" onclick="setView('3d', this)">3D</button>
+            </div>
+          </div>
+
+          <div class="canvas-container" id="canvas-container">
+            <canvas id="toolpath-canvas" width="600" height="380"></canvas>
+            <div class="canvas-legend">
+              <span class="legend-item">
+                <span class="legend-line rapid"></span> Rapid Move (G0)
+              </span>
+              <span class="legend-item">
+                <span class="legend-line linear"></span> Linear Move (G1)
+              </span>
+              <span class="legend-item">
+                <span class="legend-line pen-up"></span> Pen Up (Z Move)
+              </span>
+            </div>
+          </div>
+
+          <div class="summary-section">
+            <div class="summary-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              Summary
+            </div>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-card-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div class="summary-info">
+                  <span class="summary-label">Estimated Time</span>
+                  <span class="summary-value" id="est-time">~ 1 min</span>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                  </svg>
+                </div>
+                <div class="summary-info">
+                  <span class="summary-label">Path Length</span>
+                  <span class="summary-value" id="path-length">40 mm</span>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                  </svg>
+                </div>
+                <div class="summary-info">
+                  <span class="summary-label">Total Moves</span>
+                  <span class="summary-value" id="total-moves">8</span>
+                </div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-card-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  </svg>
+                </div>
+                <div class="summary-info">
+                  <span class="summary-label">Bounds</span>
+                  <span class="summary-value" id="bounds">X: 0–10 / Y: 0–10</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="tip-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span id="tip-text">Tip: Blue lines are cutting/drawing moves (G1). Arrows show the tool direction.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Generated G-code -->
+        <div class="panel gcode-output-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Generated G-code
+            </div>
+            <div class="output-actions">
+              <button class="btn-ghost btn-sm" onclick="copyGcode()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy
+              </button>
+              <button class="btn-ghost btn-sm" onclick="downloadGcode()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+              <button class="btn-ghost btn-sm" onclick="saveGcode()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                </svg>
+                Save
+              </button>
+            </div>
+          </div>
+
+          <div class="gcode-editor" id="gcode-editor">
+            <div class="gcode-lines" id="gcode-lines">
+              <!-- lines rendered by JS -->
+            </div>
+          </div>
+
+          <div class="gcode-actions">
+            <div class="actions-header">Actions</div>
+            <div class="actions-row">
+              <button class="action-btn btn-download-nc" onclick="downloadGcode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download .nc
+              </button>
+              <button class="action-btn btn-copy-clip" onclick="copyGcode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+                Copy to Clipboard
+              </button>
+              <button class="action-btn btn-simulate" onclick="simulateGcode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Simulate
+              </button>
+              <button class="action-btn btn-clear-g" onclick="clearGcode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                </svg>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div class="explanation-block">
+            <div class="expl-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Explanation
+            </div>
+            <p class="expl-text" id="gcode-explanation">
+              This G-code draws a square with side length 10 mm starting from (0,0).
+            </p>
+            <ol class="expl-steps" id="gcode-steps">
+              <li>Moves to (0,0)</li>
+              <li>Draws 4 lines to form a square</li>
+              <li>Returns to starting point</li>
+              <li>Lifts the tool up</li>
+            </ol>
+          </div>
+
+          <div class="coord-diagram-wrap">
+            <canvas id="coord-diagram" width="220" height="160"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
