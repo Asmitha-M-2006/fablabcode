@@ -87,7 +87,7 @@ async function serveStatic(req, res, pathname) {
 }
 
 if (require.main === module) {
-  const port = Number.parseInt(process.env.PORT, 10) || 3000;
+  const port = Number.parseInt(process.env.PORT, 10) || 3002;
   const server = createServer();
   server.listen(port, () => {
     console.log(`FAB-LabCode running at http://localhost:${port}`);

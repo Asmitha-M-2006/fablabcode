@@ -66,7 +66,6 @@ async function generateOpenAiAssistantReply({ message, history }) {
             schema: RESPONSE_SCHEMA,
             strict: true,
           },
-          verbosity: 'medium',
         },
         max_output_tokens: 5000,
       }),

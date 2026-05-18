@@ -1,161 +1,267 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Terminal, Copy, ExternalLink, Info, Activity, Layers, Play, Check } from 'lucide-react';
+import { Terminal, Copy, Layers, Check, Play, BookOpen, Code2, Eye } from 'lucide-react';
 
-/**
- * OutputPanel component displays the results of the AI's processing.
- * Refactored to match the CSS grid structure (.output-workspace, .output-pane).
- * 
- * @param {Object} output - The artifact returned by the AI.
- */
+const TABS = [
+  { id: 'plan',    label: 'Plan',    Icon: BookOpen },
+  { id: 'sandbox', label: 'Sandbox', Icon: Code2    },
+  { id: 'preview', label: 'Preview', Icon: Eye      },
+];
+
 function OutputPanel({ output }) {
+  const [activeTab, setActiveTab]             = useState('plan');
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]                   = useState(false);
+  // editedFiles stores user edits per file index: { 0: 'new content', 1: '...' }
+  const [editedFiles, setEditedFiles]         = useState({});
 
-  // Normalize files from output artifact
   const files = useMemo(() => {
     if (!output) return [];
-    
-    let normalized = [];
-    if (Array.isArray(output.files)) {
-      normalized = output.files.map(f => ({
-        filename: f.filename || 'snippet.txt',
-        language: f.language || 'Text',
-        content: f.content || '',
-        primary: f.primary
-      }));
-    } else {
-      normalized = [{
-        filename: output.filename || 'snippet.txt',
-        language: output.language || 'Text',
-        content: output.code || '',
-        primary: true
-      }];
+    if (Array.isArray(output.files) && output.files.length > 0) {
+      return output.files
+        .map(f => ({ filename: f.filename || 'snippet.txt', language: f.language || 'Text', content: f.content || '', primary: f.primary }))
+        .filter(f => f.content);
     }
-    return normalized.filter(f => f.content);
+    return output.code ? [{ filename: output.filename || 'snippet.txt', language: output.language || 'Text', content: output.code, primary: true }] : [];
   }, [output]);
 
-  // Set active file when output changes
+  // When new output arrives, auto-switch to sandbox and clear edits
   useEffect(() => {
-    if (files.length > 0) {
-      const primaryIndex = files.findIndex(f => f.primary);
-      setActiveFileIndex(primaryIndex >= 0 ? primaryIndex : 0);
+    if (output) {
+      setActiveTab('sandbox');
+      setEditedFiles({});  // reset edits on new output
+      const pri = files.findIndex(f => f.primary);
+      setActiveFileIndex(pri >= 0 ? pri : 0);
     }
-  }, [files]);
+  }, [output]);  // eslint-disable-line
 
+  const activeFile = files[activeFileIndex] ?? files[0];
+  const tabIndex   = TABS.findIndex(t => t.id === activeTab);
+
+  // Get the current content for a file — edited version takes priority
+  const getContent = (idx) =>
+    editedFiles[idx] !== undefined ? editedFiles[idx] : (files[idx]?.content ?? '');
+
+  // Handle user edits in the textarea
+  const handleEdit = (idx, value) =>
+    setEditedFiles(prev => ({ ...prev, [idx]: value }));
+
+  // Reset a file back to the original AI-generated content
+  const handleReset = (idx) =>
+    setEditedFiles(prev => { const n = { ...prev }; delete n[idx]; return n; });
+
+  const copyCode = () => {
+    const content = getContent(activeFileIndex);
+    if (content) {
+      navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  /* ── Empty state ─────────────────────────────── */
   if (!output) {
     return (
       <div className="panel output-panel">
         <div className="panel-header">
-           <div className="panel-title"><Terminal size={18} /> AI Output</div>
+          <div className="panel-title"><Terminal size={18} /> AI Output</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>
-          <Terminal size={48} />
-          <h3>No artifact generated</h3>
+        <div className="output-empty">
+          <Terminal size={44} />
+          <h3>Nothing generated yet</h3>
           <p>Send a message to start building.</p>
         </div>
       </div>
     );
   }
 
-  const activeFile = files[activeFileIndex] || files[0];
+  /* ── Build preview from edited file contents ────────────
+     We look for CSS, JS, and HTML files by language.
+     If the user has edited one of those files, we use the
+     edited version — so Preview always reflects your changes.
+  ───────────────────────────────────────────────────────── */
+  const cssIdx  = files.findIndex(f => f.language.toLowerCase() === 'css');
+  const jsIdx   = files.findIndex(f => f.primary) !== -1
+    ? files.findIndex(f => f.primary)
+    : files.findIndex(f => f.language.toLowerCase().includes('javascript'));
+  const htmlIdx = files.findIndex(f => f.language.toLowerCase() === 'html');
 
-  /**
-   * Copy current code to clipboard.
-   */
-  const copyCode = () => {
-    if (activeFile) {
-      navigator.clipboard.writeText(activeFile.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  // Use edited content if available, otherwise fall back to AI-generated preview parts
+  const previewStyles = cssIdx  >= 0 ? getContent(cssIdx)  : (output.preview?.styles  || '');
+  const previewScript = jsIdx   >= 0 ? getContent(jsIdx)   : (output.preview?.script  || '');
+  const previewMarkup = htmlIdx >= 0 ? getContent(htmlIdx) : (output.preview?.markup  || '');
 
+  const iframeSrc = output.preview?.mode === 'live'
+    ? `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${previewStyles}</style></head><body>${previewMarkup}<script>${previewScript}<\/script></body></html>`
+    : null;
+
+  /* ── Render ──────────────────────────────────── */
   return (
     <div className="panel output-panel">
-      {/* Panel Header */}
-      <div className="panel-header">
+
+      {/* Header */}
+      <div className="panel-header output-panel-header">
         <div className="panel-title">
           <Terminal size={18} />
-          AI Output Artifacts
+          {output.title || 'AI Output'}
         </div>
-        <div className="output-actions">
-          <button className="btn-ghost btn-sm" onClick={copyCode}>
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
+
+        {/* Sliding tab toggle */}
+        <div className="output-toggle">
+          <div
+            className="output-toggle-slider"
+            style={{ transform: `translateX(${tabIndex * 100}%)`, width: `${100 / TABS.length}%` }}
+          />
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`output-toggle-btn${activeTab === id ? ' active' : ''}`}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={13} />
+              {label}
+            </button>
+          ))}
         </div>
+
+        <button className="btn-ghost btn-sm" onClick={copyCode}>
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
       </div>
 
-      {/* Tabs Section */}
-      <div className="output-tabs">
-        {files.map((file, idx) => (
-          <button 
-            key={idx}
-            className={`tab-btn ${idx === activeFileIndex ? 'active' : ''}`}
-            onClick={() => setActiveFileIndex(idx)}
-          >
-            <Layers size={13} />
-            {file.filename}
-          </button>
-        ))}
-      </div>
+      {/* ── TAB: PLAN ──────────────────────────── */}
+      {activeTab === 'plan' && (
+        <div className="tab-pane plan-pane">
+          <div className="plan-summary-block">
+            <p className="plan-title">{output.title}</p>
+            <p className="plan-summary">{output.summary}</p>
+          </div>
 
-      {/* Main Workspace Grid */}
-      <div className="output-workspace">
-        
-        {/* Pane 1: Code Editor (Full Height on Left) */}
-        <div className="output-pane output-pane-code">
-          <div className="pane-heading">
-            <span className="pane-kicker">{activeFile?.language || 'Code'}</span>
-            <div className="pane-caption">{activeFile?.filename}</div>
-          </div>
-          <div className="code-block-wrapper" style={{ flex: 1, overflow: 'auto', background: '#0f1117', borderRadius: '8px', marginTop: '10px' }}>
-            <pre style={{ margin: 0, padding: '16px', color: '#e2e8f0', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
-              <code>{activeFile?.content}</code>
-            </pre>
-          </div>
-        </div>
+          {output.explanation && (
+            <div className="plan-section">
+              <h4 className="plan-section-title">How it works</h4>
+              <p className="plan-text">{output.explanation}</p>
+            </div>
+          )}
 
-        {/* Pane 2: Preview (Top Right) */}
-        <div className="output-pane output-pane-preview">
-          <div className="pane-heading">
-            <span className="pane-kicker">Preview</span>
-            <div className="pane-caption">{output.preview?.title || 'Interactive Preview'}</div>
-          </div>
-          <div className="preview-container" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border)', borderRadius: '8px', background: '#fff', marginTop: '10px' }}>
-            {output.preview?.mode === 'live' ? (
-              <div style={{ textAlign: 'center' }}>
-                <Play size={24} color="var(--accent)" />
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>Live preview ready</p>
+          {Array.isArray(output.steps) && output.steps.length > 0 && (
+            <div className="plan-section">
+              <h4 className="plan-section-title">Implementation steps</h4>
+              <ol className="plan-steps">
+                {output.steps.map((step, i) => (
+                  <li key={i} className="plan-step">
+                    <span className="plan-step-num">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {Array.isArray(output.tips) && output.tips.length > 0 && (
+            <div className="plan-section plan-tips-block">
+              <h4 className="plan-section-title">Best practices</h4>
+              <ul className="plan-tips">
+                {output.tips.map((tip, i) => <li key={i}>{tip}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {output.complexity && (
+            <div className="plan-section">
+              <h4 className="plan-section-title">Complexity</h4>
+              <div className="plan-complexity">
+                {[
+                  ['Level',     output.complexity.level],
+                  ['Time',      output.complexity.time],
+                  ['Space',     output.complexity.space],
+                  ['Pattern',   output.complexity.pattern],
+                  ['Paradigm',  output.complexity.paradigm],
+                ].map(([k, v]) => (
+                  <div key={k} className="plan-complexity-item">
+                    <span className="plan-complexity-key">{k}</span>
+                    <span className="plan-complexity-val">{v}</span>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{output.preview?.note || 'No preview available'}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: SANDBOX ───────────────────────── */}
+      {activeTab === 'sandbox' && (
+        <div className="tab-pane sandbox-pane">
+          {/* File tabs */}
+          <div className="sandbox-file-tabs">
+            {files.map((f, i) => (
+              <button
+                key={i}
+                className={`sandbox-file-tab${i === activeFileIndex ? ' active' : ''}`}
+                onClick={() => setActiveFileIndex(i)}
+              >
+                <Layers size={12} />
+                {f.filename}
+              </button>
+            ))}
+          </div>
+
+          {/* Language badge + reset button if file was edited */}
+          <div className="sandbox-file-meta">
+            <span className="sandbox-lang-badge">{activeFile?.language}</span>
+            <span className="sandbox-filename">{activeFile?.filename}</span>
+            {editedFiles[activeFileIndex] !== undefined && (
+              <button
+                className="sandbox-reset-btn"
+                onClick={() => handleReset(activeFileIndex)}
+                title="Reset to original"
+              >
+                ↺ Reset
+              </button>
             )}
           </div>
-        </div>
 
-        {/* Pane 3: Explanation (Bottom Right) */}
-        <div className="output-pane output-pane-explanation">
-          <div className="pane-heading">
-            <span className="pane-kicker">Logic & Flow</span>
-            <div className="pane-caption">{output.summary || 'Implementation details'}</div>
-          </div>
-          <div className="explanation-scroll" style={{ flex: 1, overflowY: 'auto', marginTop: '10px' }}>
-             <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '12px' }}>
-               {output.explanation}
-             </div>
-             {(output.steps || []).map((step, idx) => (
-               <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent-light)', color: 'var(--accent-dark)', fontSize: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                   {idx + 1}
-                 </div>
-                 <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>{step}</div>
-               </div>
-             ))}
+          {/* Editable code textarea */}
+          <div className="sandbox-code-wrap">
+            <textarea
+              className="sandbox-code-editor"
+              value={getContent(activeFileIndex)}
+              onChange={e => handleEdit(activeFileIndex, e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
           </div>
         </div>
+      )}
 
-      </div>
+      {/* ── TAB: PREVIEW ───────────────────────── */}
+      {activeTab === 'preview' && (
+        <div className="tab-pane preview-pane">
+          {/* Show a small badge if user has edited files */}
+          {Object.keys(editedFiles).length > 0 && iframeSrc && (
+            <div className="preview-edited-badge">✎ Showing your edits</div>
+          )}
+          {iframeSrc ? (
+            <iframe
+              key={iframeSrc}          /* key forces re-mount when content changes */
+              srcDoc={iframeSrc}
+              sandbox="allow-scripts"
+              className="preview-iframe"
+              title="Live preview"
+            />
+          ) : (
+            <div className="preview-note-wrap">
+              <div className="preview-note-card">
+                <Play size={28} />
+                <h4>{output.preview?.title || 'No live preview'}</h4>
+                <p>{output.preview?.body || 'A live preview is not available for this artifact.'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

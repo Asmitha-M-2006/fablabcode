@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/health",         "destination": "/api/health.mjs"  },
+    { "source": "/api/chat",           "destination": "/api/chat.mjs"    },
+    { "source": "/api/chat/history",   "destination": "/api/chat.mjs"    },
+    { "source": "/api/models",         "destination": "/api/chat.mjs"    },
+    { "source": "/api/gcode/generate", "destination": "/api/chat.mjs"    },
+    { "source": "/(.*)",               "destination": "/index.html"      }
+  ]
+}
