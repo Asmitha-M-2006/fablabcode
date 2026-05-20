@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto('http://localhost:5173');
+await page.waitForLoadState('networkidle');
+await page.click('button:has-text("AI Sandbox")');
+await page.waitForTimeout(400);
+await page.fill('.chat-textarea', 'Build a todo list app');
+await page.click('.send-btn');
+await page.waitForSelector('.output-toggle', { timeout: 95000 });
+await page.waitForTimeout(500);
+await page.locator('.output-toggle-btn').filter({ hasText: 'Sandbox' }).click();
+await page.waitForTimeout(400);
+await page.screenshot({ path: '/tmp/export-btn.png' });
+await browser.close();
+console.log('done');

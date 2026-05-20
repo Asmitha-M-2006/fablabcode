@@ -54,6 +54,20 @@ function makeHeader(instruction, units, tool) {
   ];
 }
 
+// Generate arc points for G2/G3 (circular interpolation) → array of {x,y,z}
+function arcPoints(cx, cy, startX, startY, r, z, clockwise = true, segments = 48) {
+  const startAngle = Math.atan2(startY - cy, startX - cx);
+  const pts = [];
+  for (let i = 0; i <= segments; i++) {
+    const t     = i / segments;
+    const angle = clockwise
+      ? startAngle - t * Math.PI * 2
+      : startAngle + t * Math.PI * 2;
+    pts.push({ cmd: 'G1', x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), z });
+  }
+  return pts;
+}
+
 function squareTemplate(size, feed, safeZ, units, tool) {
   const side = clampNumber(size, 10, { min: 0.1, max: 5000 });
   const code = [
@@ -73,6 +87,15 @@ function squareTemplate(size, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: 0,    y: 0,    z: safeZ },
+      { cmd: 'G0', x: 0,    y: 0,    z: 0     },
+      { cmd: 'G1', x: side, y: 0,    z: 0     },
+      { cmd: 'G1', x: side, y: side, z: 0     },
+      { cmd: 'G1', x: 0,    y: side, z: 0     },
+      { cmd: 'G1', x: 0,    y: 0,    z: 0     },
+      { cmd: 'G0', x: 0,    y: 0,    z: safeZ },
+    ],
     explanation: `This G-code draws a square with side length ${formatNumber(side)} ${units} starting from (0,0).`,
     steps: [
       'Moves to the origin',
@@ -86,11 +109,9 @@ function squareTemplate(size, feed, safeZ, units, tool) {
       moves: 8,
       bounds: `X: ${formatSpan(0, side)} / Y: ${formatSpan(0, side)}`,
     },
-    shape: 'square',
-    size: side,
+    shape: 'square', size: side,
     instruction: `draw a square ${formatNumber(side)}x${formatNumber(side)}`,
-    tool,
-    units,
+    tool, units,
   };
 }
 
@@ -114,6 +135,15 @@ function rectangleTemplate(width, height, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: 0, y: 0, z: safeZ },
+      { cmd: 'G0', x: 0, y: 0, z: 0 },
+      { cmd: 'G1', x: w, y: 0, z: 0 },
+      { cmd: 'G1', x: w, y: h, z: 0 },
+      { cmd: 'G1', x: 0, y: h, z: 0 },
+      { cmd: 'G1', x: 0, y: 0, z: 0 },
+      { cmd: 'G0', x: 0, y: 0, z: safeZ },
+    ],
     explanation: `This G-code draws a rectangle ${formatNumber(w)} x ${formatNumber(h)} ${units} starting from (0,0).`,
     steps: [
       'Moves to the rectangle origin',
@@ -154,6 +184,12 @@ function circleTemplate(radius, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: r, y: 0, z: safeZ },
+      { cmd: 'G0', x: r, y: 0, z: 0 },
+      ...arcPoints(0, 0, r, 0, r, 0, true),
+      { cmd: 'G0', x: r, y: 0, z: safeZ },
+    ],
     explanation: `This G-code draws a full circle with radius ${formatNumber(r)} ${units}.`,
     steps: [
       `Moves to the start point at X=${formatNumber(r)}, Y=0`,
@@ -193,6 +229,16 @@ function engraveTemplate(text, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: 0, y: 0, z: safeZ },
+      ...content.split('').flatMap((_, idx) => [
+        { cmd: 'G0', x: idx * 6, y: 0, z: safeZ },
+        { cmd: 'G0', x: idx * 6, y: 0, z: 0 },
+        { cmd: 'G1', x: idx * 6, y: 8, z: 0 },
+        { cmd: 'G0', x: idx * 6, y: 8, z: safeZ },
+      ]),
+      { cmd: 'G0', x: 0, y: 0, z: safeZ },
+    ],
     explanation: `This engraving pass approximates "${content}" using vertical strokes spaced across the X axis.`,
     steps: content.split('').map((character, index) => (
       `Positions to character ${index + 1} and engraves "${character}" with a vertical stroke`
@@ -230,6 +276,14 @@ function triangleTemplate(size, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: 0,        y: 0,      z: safeZ },
+      { cmd: 'G0', x: 0,        y: 0,      z: 0     },
+      { cmd: 'G1', x: side,     y: 0,      z: 0     },
+      { cmd: 'G1', x: side / 2, y: height, z: 0     },
+      { cmd: 'G1', x: 0,        y: 0,      z: 0     },
+      { cmd: 'G0', x: 0,        y: 0,      z: safeZ },
+    ],
     explanation: `This G-code draws an equilateral triangle with side length ${formatNumber(side)} ${units}.`,
     steps: [
       'Moves to the triangle origin',
@@ -272,6 +326,12 @@ function lineTemplate(x1, y1, x2, y2, feed, safeZ, units, tool) {
 
   return {
     code,
+    toolpath: [
+      { cmd: 'G0', x: startX, y: startY, z: safeZ },
+      { cmd: 'G0', x: startX, y: startY, z: 0 },
+      { cmd: 'G1', x: endX,   y: endY,   z: 0 },
+      { cmd: 'G0', x: endX,   y: endY,   z: safeZ },
+    ],
     explanation: `This G-code draws a straight line from (${formatNumber(startX)}, ${formatNumber(startY)}) to (${formatNumber(endX)}, ${formatNumber(endY)}).`,
     steps: [
       `Moves rapidly to (${formatNumber(startX)}, ${formatNumber(startY)})`,
@@ -296,6 +356,98 @@ function lineTemplate(x1, y1, x2, y2, feed, safeZ, units, tool) {
   };
 }
 
+function sphereTemplate(radius, feed, safeZ, units, tool) {
+  const r        = clampNumber(radius, 20, { min: 1, max: 500 });
+  const PASSES   = 16;  // latitude slices
+  const code     = [
+    ...makeHeader(`draw a sphere radius ${formatNumber(r)}`, units, tool),
+    unitsCommand(units),
+    'G90',
+    `G0 Z${formatNumber(safeZ + r * 2)}  ; Move above sphere`,
+  ];
+  const toolpath = [{ cmd: 'G0', x: 0, y: 0, z: safeZ + r * 2 }];
+  let totalLen   = 0;
+
+  // Latitude passes from bottom (z=0) to top (z=2r) — 3-axis helical profiling
+  for (let i = 0; i <= PASSES; i++) {
+    const z     = (i / PASSES) * r * 2;          // z from 0 to 2r
+    const circR = Math.sqrt(Math.max(0, r * r - Math.pow(z - r, 2)));
+    if (circR < 0.5) continue;
+
+    const zHeight = Math.max(z, 0);
+    code.push(
+      `; Pass ${i + 1} — Z=${formatNumber(zHeight)} r=${formatNumber(circR)}`,
+      `G0 Z${formatNumber(Math.max(zHeight + 2, safeZ))}`,
+      `G0 X${formatNumber(circR)} Y0`,
+      `G0 Z${formatNumber(zHeight)}`,
+      `G2 X${formatNumber(circR)} Y0 I${formatNumber(-circR)} J0 F${formatNumber(feed)}`,
+    );
+
+    toolpath.push(
+      { cmd: 'G0', x: 0,      y: 0, z: Math.max(zHeight + 2, safeZ) },
+      { cmd: 'G0', x: circR,  y: 0, z: zHeight },
+      ...arcPoints(0, 0, circR, 0, circR, zHeight, true, 48),
+      { cmd: 'G0', x: circR,  y: 0, z: safeZ + r * 2 },
+    );
+
+    totalLen += 2 * Math.PI * circR;
+  }
+
+  code.push(`G0 Z${formatNumber(safeZ + r * 2)}  ; Retract above sphere`, 'M2');
+
+  return {
+    code,
+    toolpath,
+    explanation: `This G-code profiles a hemisphere with radius ${formatNumber(r)} ${units} using ${PASSES + 1} circular passes at increasing Z heights. Each pass cuts a latitude circle whose radius follows the sphere equation r² = R² − (z − R)².`,
+    steps: [
+      `Moves to safe height above the sphere (Z=${formatNumber(safeZ + r * 2)}).`,
+      `Cuts ${PASSES + 1} latitude circles from the base (Z=0) to the apex (Z=${formatNumber(r * 2)}).`,
+      `Each G2 arc radius = √(R² − (z−R)²) — the sphere cross-section at that height.`,
+      `Retracts fully above the workpiece after the final pass.`,
+    ],
+    summary: {
+      time:   estimateTime(totalLen, feed),
+      length: `${formatNumber(Math.round(totalLen))} ${units}`,
+      moves:  (PASSES + 1) * 4,
+      bounds: `X: ${formatSpan(-r, r)} / Y: ${formatSpan(-r, r)} / Z: ${formatSpan(0, r * 2)}`,
+    },
+    shape: 'sphere',
+    r,
+    instruction: `draw a sphere radius ${formatNumber(r)}`,
+    tool,
+    units,
+  };
+}
+
+// ─── extra shapes via keyword matching ─────────────────────────
+// star, heart, pentagon, hexagon → approximate with G1 lines
+function polygonTemplate(sides, size, feed, safeZ, units, tool) {
+  const n    = Math.max(3, Math.min(12, Math.round(sides)));
+  const s    = clampNumber(size, 20, { min: 1, max: 5000 });
+  const code = [...makeHeader(`regular ${n}-gon side ${formatNumber(s)}`, units, tool), unitsCommand(units), 'G90', `G0 Z${formatNumber(safeZ)}`];
+  const toolpath = [{ cmd: 'G0', x: 0, y: 0, z: safeZ }];
+  const pts = Array.from({ length: n + 1 }, (_, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return { x: +(s * Math.cos(angle)).toFixed(3), y: +(s * Math.sin(angle)).toFixed(3) };
+  });
+  code.push(`G0 X${pts[0].x} Y${pts[0].y}`, 'G0 Z0');
+  toolpath.push({ cmd: 'G0', x: pts[0].x, y: pts[0].y, z: safeZ }, { cmd: 'G0', x: pts[0].x, y: pts[0].y, z: 0 });
+  for (let i = 1; i <= n; i++) {
+    code.push(`G1 X${pts[i].x} Y${pts[i].y} F${formatNumber(feed)}`);
+    toolpath.push({ cmd: 'G1', x: pts[i].x, y: pts[i].y, z: 0 });
+  }
+  code.push(`G0 Z${formatNumber(safeZ)}`, 'M2');
+  toolpath.push({ cmd: 'G0', x: pts[n].x, y: pts[n].y, z: safeZ });
+  const perimeter = n * 2 * s * Math.sin(Math.PI / n);
+  return {
+    code, toolpath,
+    explanation: `Regular ${n}-sided polygon with circumradius ${formatNumber(s)} ${units}.`,
+    steps: [`Positions at vertex 1`, `Cuts ${n} equal edges`, `Closes shape at vertex 1`, `Retracts`],
+    summary: { time: estimateTime(perimeter, feed), length: `${formatNumber(perimeter)} ${units}`, moves: n + 4, bounds: `X: ${formatSpan(-s, s)} / Y: ${formatSpan(-s, s)}` },
+    shape: 'polygon', n, r: s, instruction: `${n}-gon size ${formatNumber(s)}`, tool, units,
+  };
+}
+
 function generateGcode(input = {}) {
   const instruction = typeof input.instruction === 'string' ? input.instruction.trim() : '';
 
@@ -313,14 +465,23 @@ function generateGcode(input = {}) {
 
   let data;
 
-  const squareMatch = raw.match(/square\s+(\d+(?:\.\d+)?)(?:x(\d+(?:\.\d+)?))?/);
+  const squareMatch    = raw.match(/square\s+(\d+(?:\.\d+)?)(?:x(\d+(?:\.\d+)?))?/);
   const rectangleMatch = raw.match(/rect(?:angle)?\s+(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/);
-  const circleMatch = raw.match(/circle\s+(?:radius\s+)?(\d+(?:\.\d+)?)/);
-  const engraveMatch = instruction.match(/engrave\s+["']?(.+?)["']?\s*$/i);
-  const triangleMatch = raw.match(/triangle\s+(\d+(?:\.\d+)?)/);
-  const lineMatch = raw.match(/line\s+from\s+\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\s+to\s+\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?/);
+  const circleMatch    = raw.match(/circle\s+(?:radius\s+)?(\d+(?:\.\d+)?)/);
+  const engraveMatch   = instruction.match(/engrave\s+["']?(.+?)["']?\s*$/i);
+  const triangleMatch  = raw.match(/triangle\s+(\d+(?:\.\d+)?)/);
+  const lineMatch      = raw.match(/line\s+from\s+\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?\s+to\s+\(?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)?/);
+  const sphereMatch    = raw.match(/sphere\s+(?:radius\s+)?(\d+(?:\.\d+)?)/);
+  const isSphere       = /\bsphere\b/.test(raw);
+  const hexMatch       = raw.match(/hex(?:agon)?\s+(\d+(?:\.\d+)?)/);
+  const pentMatch      = raw.match(/pent(?:agon)?\s+(\d+(?:\.\d+)?)/);
+  const octMatch       = raw.match(/oct(?:agon)?\s+(\d+(?:\.\d+)?)/);
 
-  if (rectangleMatch) {
+  if (sphereMatch) {
+    data = sphereTemplate(sphereMatch[1], feed, safeZ, units, tool);
+  } else if (isSphere) {
+    data = sphereTemplate(20, feed, safeZ, units, tool); // default radius 20
+  } else if (rectangleMatch) {
     data = rectangleTemplate(rectangleMatch[1], rectangleMatch[2], feed, safeZ, units, tool);
   } else if (squareMatch) {
     data = squareTemplate(squareMatch[1], feed, safeZ, units, tool);
@@ -332,6 +493,12 @@ function generateGcode(input = {}) {
     data = triangleTemplate(triangleMatch[1], feed, safeZ, units, tool);
   } else if (lineMatch) {
     data = lineTemplate(lineMatch[1], lineMatch[2], lineMatch[3], lineMatch[4], feed, safeZ, units, tool);
+  } else if (hexMatch) {
+    data = polygonTemplate(6, hexMatch[1], feed, safeZ, units, tool);
+  } else if (pentMatch) {
+    data = polygonTemplate(5, pentMatch[1], feed, safeZ, units, tool);
+  } else if (octMatch) {
+    data = polygonTemplate(8, octMatch[1], feed, safeZ, units, tool);
   } else {
     data = squareTemplate(10, feed, safeZ, units, tool);
   }

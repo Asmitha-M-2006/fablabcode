@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Terminal, Copy, Layers, Check, Play, BookOpen, Code2, Eye } from 'lucide-react';
+import { Terminal, Copy, Layers, Check, Play, BookOpen, Code2, Eye, Download } from 'lucide-react';
+import JSZip from 'jszip';
 import {
   BigOGraph, ComplexityBreakdown, FlowDiagram, FileArchitecture,
   UserInteractionFlow, ConceptChips, FeatureList, AlgorithmTrace,
@@ -60,6 +61,36 @@ function OutputPanel({ output }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const exportProject = async () => {
+    if (!files.length) return;
+    const zip      = new JSZip();
+    // Folder name = slugified title
+    const folder   = (output.title || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const projDir  = zip.folder(folder);
+
+    files.forEach((f, idx) => {
+      projDir.file(f.filename, getContent(idx));
+    });
+
+    // If only one file and it's not HTML, also add a minimal HTML wrapper
+    const hasHtml = files.some(f => f.language?.toLowerCase() === 'html');
+    if (!hasHtml && files.length === 1) {
+      const ext = files[0].filename.split('.').pop().toLowerCase();
+      const lang = files[0].language?.toLowerCase();
+      if (lang === 'javascript' || ext === 'js') {
+        projDir.file('index.html', `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width,initial-scale=1" />\n  <title>${output.title || 'Project'}</title>\n</head>\n<body>\n  <script src="${files[0].filename}"><\/script>\n</body>\n</html>`);
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${folder}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   /* ── Empty state ─────────────────────────────── */
@@ -127,10 +158,15 @@ function OutputPanel({ output }) {
           ))}
         </div>
 
-        <button className="btn-ghost btn-sm" onClick={copyCode}>
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        <div className="output-header-actions">
+          <button className="btn-ghost btn-sm" onClick={copyCode}>
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <button className="btn-ghost btn-sm btn-export" onClick={exportProject} title="Download all files as .zip">
+            <Download size={14} /> Export
+          </button>
+        </div>
       </div>
 
       {/* ── TAB: PLAN ──────────────────────────── */}

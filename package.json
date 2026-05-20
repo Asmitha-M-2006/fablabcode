@@ -14,10 +14,12 @@
     "node": ">=20"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "lucide-react": "^1.16.0",
     "pg": "^8.20.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

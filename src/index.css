@@ -311,6 +311,9 @@ body {
 /* ── Output Panel tabs ── */
 .output-panel { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
 .output-panel-header { justify-content: space-between; gap: 10px; }
+.output-header-actions { display: flex; align-items: center; gap: 6px; }
+.btn-export { background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(139,92,246,.1)); border-color: rgba(99,102,241,.35); color: var(--accent-dark); }
+.btn-export:hover { background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(139,92,246,.2)); border-color: var(--accent); }
 
 .output-toggle {
   position: relative; display: flex;
@@ -801,16 +804,70 @@ body {
 .summary-key { font-size: 10.5px; color: var(--text-muted); text-transform: capitalize; }
 .summary-val { font-size: 13px; font-weight: 600; }
 
-/* Canvas */
-.gcode-canvas-wrap {
+/* ── 3D G-code Viewer ── */
+.gcode-3d-wrap {
   position: relative; border-radius: var(--radius-lg); overflow: hidden;
-  background: var(--bg-dark); flex-shrink: 0;
+  background: #0d1117; flex-shrink: 0;
+  height: 380px; /* fixed height for the 3D canvas */
 }
-.gcode-canvas { display: block; width: 100%; }
-.canvas-placeholder {
+.gcode-3d-canvas {
+  width: 100%; height: 100%; display: block;
+}
+.gcode-3d-canvas canvas { display: block; }
+
+.gcode-3d-controls {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(15,17,23,.85); backdrop-filter: blur(8px);
+  border: 1px solid rgba(99,102,241,.3); border-radius: 99px;
+  padding: 5px 12px;
+}
+.gcode-3d-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: rgba(99,102,241,.25);
+  color: #c7d2fe; font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .14s;
+}
+.gcode-3d-btn:hover { background: rgba(99,102,241,.5); }
+.gcode-3d-progress-wrap {
+  width: 120px; height: 4px; border-radius: 99px;
+  background: rgba(255,255,255,.1); overflow: hidden;
+}
+.gcode-3d-progress-bar {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width .1s linear;
+}
+.gcode-3d-pct { font-size: 11px; color: #94a3b8; font-family: var(--font-mono); min-width: 28px; }
+
+.gcode-3d-legend {
+  position: absolute; top: 10px; right: 12px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: #94a3b8;
+  background: rgba(13,17,23,.75); padding: 4px 10px;
+  border-radius: 99px; backdrop-filter: blur(4px);
+}
+.gcode-3d-legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-left: 6px;
+}
+.gcode-3d-legend-dot.rapid { background: #f97316; }
+.gcode-3d-legend-dot.cut   { background: #6366f1; }
+
+.gcode-3d-empty {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px;
-  color: var(--text-muted); font-size: 13px;
+  color: #475569; pointer-events: none;
+}
+.gcode-3d-empty-icon { font-size: 40px; opacity: .5; }
+.gcode-3d-empty p    { font-size: 13px; margin: 0; }
+.gcode-3d-empty small { font-size: 11px; color: #334155; }
+
+.gcode-3d-hint {
+  position: absolute; top: 10px; left: 12px;
+  font-size: 10.5px; color: #475569;
+  background: rgba(13,17,23,.7); padding: 3px 9px;
+  border-radius: 99px; pointer-events: none;
 }
 
 /* G-code editor */

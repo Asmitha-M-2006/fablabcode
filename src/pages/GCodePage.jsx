@@ -7,15 +7,18 @@
 //   ✅ Events         → form submit, chip click, select change
 //   ✅ HOFs           → .map() to render G-code lines and example chips
 // ─────────────────────────────────────────────────────────────
-import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Copy, Check, Loader, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Copy, Check, Loader, Play } from 'lucide-react';
+import GCode3DViewer from '../components/GCode3DViewer';
 
 // Example instructions the user can click to auto-fill
 const EXAMPLES = [
   'draw a square 50',
   'draw a circle radius 30',
+  'draw a sphere radius 25',
   'draw a rectangle 80x40',
   'draw a triangle 60',
+  'draw a hexagon 30',
   'engrave HELLO',
   'line from (0,0) to (100,80)',
 ];
@@ -30,12 +33,6 @@ function GCodePage({ showToast }) {
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
   const [copied,      setCopied]      = useState(false);
-  const canvasRef = useRef(null);
-
-  // Draw toolpath preview on canvas whenever result changes
-  useEffect(() => {
-    if (result) drawPreview(result);
-  }, [result]);
 
   // ── async: send instruction to backend, get G-code back ───
   async function generateGcode(e) {
@@ -73,80 +70,6 @@ function GCodePage({ showToast }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  // ── Draw a simple toolpath preview on the canvas ──────────
-  function drawPreview(data) {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx  = canvas.getContext('2d');
-    const W    = canvas.width;
-    const H    = canvas.height;
-    const PAD  = 30;
-
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0f1117';
-    ctx.fillRect(0, 0, W, H);
-
-    // Draw grid lines
-    ctx.strokeStyle = '#1e2430';
-    ctx.lineWidth = 1;
-    for (let x = PAD; x < W - PAD; x += 20) {
-      ctx.beginPath(); ctx.moveTo(x, PAD); ctx.lineTo(x, H - PAD); ctx.stroke();
-    }
-    for (let y = PAD; y < H - PAD; y += 20) {
-      ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-    }
-
-    const draw = W - PAD * 2; // drawable area
-    const { shape } = data;
-
-    ctx.strokeStyle = '#6366f1';
-    ctx.lineWidth   = 2;
-    ctx.lineCap     = 'round';
-
-    // Scale to fit in the canvas
-    function sc(val, max) { return PAD + (val / max) * draw; }
-
-    if (shape === 'square') {
-      const s = Math.min(draw * 0.7, draw);
-      const x = (W - s) / 2; const y = (H - s) / 2;
-      ctx.strokeRect(x, y, s, s);
-    } else if (shape === 'rect') {
-      const ratio = data.w / data.h;
-      const rh = draw * 0.55; const rw = rh * ratio;
-      const x  = (W - rw) / 2; const y = (H - rh) / 2;
-      ctx.strokeRect(x, y, rw, rh);
-    } else if (shape === 'circle') {
-      ctx.beginPath();
-      ctx.arc(W / 2, H / 2, draw * 0.35, 0, Math.PI * 2);
-      ctx.stroke();
-    } else if (shape === 'triangle') {
-      const cx = W / 2; const size = draw * 0.6;
-      ctx.beginPath();
-      ctx.moveTo(cx, H / 2 - size * 0.5);
-      ctx.lineTo(cx + size * 0.5, H / 2 + size * 0.35);
-      ctx.lineTo(cx - size * 0.5, H / 2 + size * 0.35);
-      ctx.closePath(); ctx.stroke();
-    } else if (shape === 'line') {
-      const maxD = Math.max(Math.abs(data.x2 - data.x1), Math.abs(data.y2 - data.y1), 1);
-      ctx.beginPath();
-      ctx.moveTo(sc(data.x1, maxD * 1.2), H - sc(data.y1, maxD * 1.2));
-      ctx.lineTo(sc(data.x2, maxD * 1.2), H - sc(data.y2, maxD * 1.2));
-      ctx.stroke();
-    } else if (shape === 'engrave' && data.text) {
-      ctx.fillStyle = '#6366f1';
-      ctx.font      = `bold ${Math.min(36, draw / data.text.length * 1.5)}px monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(data.text, W / 2, H / 2);
-    }
-
-    // Origin dot
-    ctx.fillStyle = '#10b981';
-    ctx.beginPath();
-    ctx.arc(PAD, H - PAD, 5, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   // ── Copy G-code to clipboard ───────────────────────────────
@@ -241,18 +164,10 @@ function GCodePage({ showToast }) {
         )}
       </div>
 
-      {/* Right: canvas + G-code output */}
+      {/* Right: 3D viewer + G-code output */}
       <div className="gcode-output">
-        {/* Canvas toolpath preview */}
-        <div className="gcode-canvas-wrap">
-          <canvas ref={canvasRef} width={340} height={220} className="gcode-canvas" />
-          {!result && (
-            <div className="canvas-placeholder">
-              <Terminal size={28} />
-              <span>Toolpath will appear here</span>
-            </div>
-          )}
-        </div>
+        {/* 3D toolpath viewer */}
+        <GCode3DViewer toolpath={result?.toolpath ?? null} />
 
         {/* G-code lines — .map() renders each line with a line number */}
         {result?.code && (
