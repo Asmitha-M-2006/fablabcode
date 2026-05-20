@@ -167,15 +167,23 @@ function ChatPanel({ messages, sendMessage, clearChat, isBusy }) {
 
         {/* Quick suggestion chips — clicking one fills the input */}
         <div className="chat-suggestions">
-          {/* Event: onClick sets the input value (doesn't send automatically) */}
+          <button className="suggestion-chip" onClick={() => setInputValue('Teach me binary search')}>
+            Binary search
+          </button>
+          <button className="suggestion-chip" onClick={() => setInputValue('Teach me merge sort')}>
+            Merge sort
+          </button>
+          <button className="suggestion-chip" onClick={() => setInputValue('Implement a linked list')}>
+            Linked list
+          </button>
+          <button className="suggestion-chip" onClick={() => setInputValue('Implement a stack')}>
+            Stack
+          </button>
           <button className="suggestion-chip" onClick={() => setInputValue('Build a todo list app')}>
-            Todo list app
+            Todo app
           </button>
-          <button className="suggestion-chip" onClick={() => setInputValue('Create a REST API client')}>
-            REST API client
-          </button>
-          <button className="suggestion-chip" onClick={() => setInputValue('Write a sorting algorithm')}>
-            Sorting algorithm
+          <button className="suggestion-chip" onClick={() => setInputValue('Graph BFS and DFS')}>
+            Graph BFS/DFS
           </button>
         </div>
 

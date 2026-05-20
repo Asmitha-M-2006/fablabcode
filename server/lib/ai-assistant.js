@@ -697,6 +697,657 @@ function merge(left, right) {
     .concat(right.slice(rightIndex));
 }`;
 
+// ─── LANGUAGE DETECTION ───────────────────────────────────────
+function detectLang(combined) {
+  if (/\bpython\b|\.py\b/.test(combined))       return 'python';
+  if (/c\+\+|\bcpp\b|\.cpp\b/.test(combined))   return 'cpp';   // c++ has non-word chars, no \b needed
+  if (/\bjava\b(?!script)/.test(combined))       return 'java';
+  return 'javascript';
+}
+
+// ─── DSA IMPLEMENTATIONS ──────────────────────────────────────
+
+const BINARY_SEARCH_CODE = `function binarySearch(sortedArray, target) {
+  let left  = 0;
+  let right = sortedArray.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+
+    if (sortedArray[mid] === target) return mid;      // found
+    if (sortedArray[mid] < target)  left  = mid + 1; // discard left half
+    else                            right = mid - 1; // discard right half
+  }
+
+  return -1; // not found
+}
+
+// Example
+const arr = [1, 3, 5, 7, 9, 11, 13];
+console.log(binarySearch(arr, 7));  // → 3
+console.log(binarySearch(arr, 6));  // → -1`;
+
+const STACK_CODE = `class Stack {
+  constructor() {
+    this.items = [];
+  }
+
+  push(item) { this.items.push(item); return this; }
+  pop()      { return this.isEmpty() ? null : this.items.pop(); }
+  peek()     { return this.isEmpty() ? null : this.items[this.items.length - 1]; }
+  isEmpty()  { return this.items.length === 0; }
+  size()     { return this.items.length; }
+  clear()    { this.items = []; return this; }
+
+  toArray()  { return [...this.items]; }
+}
+
+// Real-world use: balanced parentheses checker
+function isBalanced(str) {
+  const stack = new Stack();
+  const pairs = { ')': '(', ']': '[', '}': '{' };
+
+  for (const ch of str) {
+    if ('([{'.includes(ch)) stack.push(ch);
+    else if (')]}'.includes(ch) && stack.pop() !== pairs[ch]) return false;
+  }
+
+  return stack.isEmpty();
+}
+
+console.log(isBalanced('({[]})'));  // true
+console.log(isBalanced('([)]'));    // false`;
+
+const LINKED_LIST_CODE = `class Node {
+  constructor(value) {
+    this.value = value;
+    this.next  = null;
+  }
+}
+
+class LinkedList {
+  constructor() {
+    this.head   = null;
+    this.length = 0;
+  }
+
+  prepend(value) {
+    const node = new Node(value);
+    node.next  = this.head;
+    this.head  = node;
+    this.length++;
+    return this;
+  }
+
+  append(value) {
+    const node = new Node(value);
+    if (!this.head) { this.head = node; }
+    else {
+      let cur = this.head;
+      while (cur.next) cur = cur.next;
+      cur.next = node;
+    }
+    this.length++;
+    return this;
+  }
+
+  remove(value) {
+    if (!this.head) return false;
+    if (this.head.value === value) {
+      this.head = this.head.next;
+      this.length--;
+      return true;
+    }
+    let cur = this.head;
+    while (cur.next) {
+      if (cur.next.value === value) {
+        cur.next = cur.next.next;
+        this.length--;
+        return true;
+      }
+      cur = cur.next;
+    }
+    return false;
+  }
+
+  reverse() {
+    let prev = null, cur = this.head;
+    while (cur) {
+      const next = cur.next;
+      cur.next   = prev;
+      prev       = cur;
+      cur        = next;
+    }
+    this.head = prev;
+    return this;
+  }
+
+  toArray() {
+    const result = [];
+    let cur = this.head;
+    while (cur) { result.push(cur.value); cur = cur.next; }
+    return result;
+  }
+}`;
+
+const QUICK_SORT_CODE = `function quickSort(array, low = 0, high = array.length - 1) {
+  if (low < high) {
+    const pi = partition(array, low, high);
+    quickSort(array, low, pi - 1);
+    quickSort(array, pi + 1, high);
+  }
+  return array;
+}
+
+function partition(array, low, high) {
+  const pivot = array[high]; // last element as pivot
+  let i = low - 1;
+
+  for (let j = low; j < high; j++) {
+    if (array[j] <= pivot) {
+      i++;
+      [array[i], array[j]] = [array[j], array[i]]; // swap smaller to left
+    }
+  }
+  [array[i + 1], array[high]] = [array[high], array[i + 1]]; // place pivot
+  return i + 1;
+}
+
+const arr = [10, 80, 30, 90, 40, 50, 70];
+console.log(quickSort([...arr])); // → [10, 30, 40, 50, 70, 80, 90]`;
+
+const HASH_MAP_CODE = `class HashMap {
+  constructor(capacity = 16) {
+    this.capacity = capacity;
+    this.size     = 0;
+    this.buckets  = Array.from({ length: capacity }, () => []);
+  }
+
+  hash(key) {
+    let h = 0;
+    for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) % this.capacity;
+    return h;
+  }
+
+  set(key, value) {
+    const bucket = this.buckets[this.hash(key)];
+    const entry  = bucket.find(([k]) => k === key);
+    if (entry) entry[1] = value;
+    else { bucket.push([key, value]); this.size++; }
+    return this;
+  }
+
+  get(key) {
+    const entry = this.buckets[this.hash(key)].find(([k]) => k === key);
+    return entry ? entry[1] : undefined;
+  }
+
+  has(key)    { return this.get(key) !== undefined; }
+  delete(key) {
+    const bucket = this.buckets[this.hash(key)];
+    const idx    = bucket.findIndex(([k]) => k === key);
+    if (idx === -1) return false;
+    bucket.splice(idx, 1);
+    this.size--;
+    return true;
+  }
+
+  keys()    { return this.buckets.flatMap(b => b.map(([k])   => k)); }
+  values()  { return this.buckets.flatMap(b => b.map(([,v])  => v)); }
+  entries() { return this.buckets.flatMap(b => [...b]); }
+}`;
+
+const GRAPH_CODE = `class Graph {
+  constructor() {
+    this.list = new Map(); // adjacency list
+  }
+
+  addVertex(v)      { if (!this.list.has(v)) this.list.set(v, []); return this; }
+  addEdge(v1, v2)   { this.list.get(v1)?.push(v2); this.list.get(v2)?.push(v1); return this; }
+
+  bfs(start) {
+    const visited = new Set([start]);
+    const queue   = [start];
+    const result  = [];
+
+    while (queue.length) {
+      const v = queue.shift();
+      result.push(v);
+      for (const n of this.list.get(v) || []) {
+        if (!visited.has(n)) { visited.add(n); queue.push(n); }
+      }
+    }
+    return result;
+  }
+
+  dfs(start, visited = new Set(), result = []) {
+    visited.add(start);
+    result.push(start);
+    for (const n of this.list.get(start) || []) {
+      if (!visited.has(n)) this.dfs(n, visited, result);
+    }
+    return result;
+  }
+}
+
+// Build a sample graph and traverse it
+const g = new Graph();
+['A','B','C','D','E'].forEach(v => g.addVertex(v));
+g.addEdge('A','B').addEdge('A','C').addEdge('B','D').addEdge('C','E');
+console.log('BFS:', g.bfs('A')); // → ['A','B','C','D','E']
+console.log('DFS:', g.dfs('A')); // → ['A','B','D','C','E']`;
+
+// ─── PYTHON VARIANTS ──────────────────────────────────────────
+
+const DSA_PYTHON = {
+  'binary-search': `def binary_search(sorted_array: list, target: int) -> int:
+    left, right = 0, len(sorted_array) - 1
+
+    while left <= right:
+        mid = (left + right) // 2
+
+        if sorted_array[mid] == target:
+            return mid
+        elif sorted_array[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+
+    return -1  # not found
+
+
+# Example
+arr = [1, 3, 5, 7, 9, 11, 13]
+print(binary_search(arr, 7))   # → 3
+print(binary_search(arr, 6))   # → -1`,
+
+  'merge-sort': `def merge_sort(arr: list) -> list:
+    if len(arr) <= 1:
+        return arr
+
+    mid = len(arr) // 2
+    left  = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+
+    return merge(left, right)
+
+
+def merge(left: list, right: list) -> list:
+    result, i, j = [], 0, 0
+
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+# Example
+arr = [38, 27, 43, 3, 9, 82, 10]
+print(merge_sort(arr))  # → [3, 9, 10, 27, 38, 43, 82]`,
+
+  'stack': `class Stack:
+    def __init__(self):
+        self._items = []
+
+    def push(self, item):
+        self._items.append(item)
+
+    def pop(self):
+        return self._items.pop() if self._items else None
+
+    def peek(self):
+        return self._items[-1] if self._items else None
+
+    def is_empty(self) -> bool:
+        return len(self._items) == 0
+
+    def size(self) -> int:
+        return len(self._items)
+
+
+# Real-world use: balanced parentheses checker
+def is_balanced(s: str) -> bool:
+    stack = Stack()
+    pairs = {')': '(', ']': '[', '}': '{'}
+
+    for ch in s:
+        if ch in '([{':
+            stack.push(ch)
+        elif ch in ')]}':
+            if stack.pop() != pairs[ch]:
+                return False
+
+    return stack.is_empty()
+
+
+print(is_balanced('({[]})'))  # True
+print(is_balanced('([)]'))    # False`,
+
+  'linked-list': `class Node:
+    def __init__(self, value):
+        self.value = value
+        self.next  = None
+
+
+class LinkedList:
+    def __init__(self):
+        self.head   = None
+        self.length = 0
+
+    def prepend(self, value):
+        node      = Node(value)
+        node.next = self.head
+        self.head = node
+        self.length += 1
+
+    def append(self, value):
+        node = Node(value)
+        if not self.head:
+            self.head = node
+        else:
+            cur = self.head
+            while cur.next:
+                cur = cur.next
+            cur.next = node
+        self.length += 1
+
+    def remove(self, value) -> bool:
+        if not self.head:
+            return False
+        if self.head.value == value:
+            self.head = self.head.next
+            self.length -= 1
+            return True
+        cur = self.head
+        while cur.next:
+            if cur.next.value == value:
+                cur.next = cur.next.next
+                self.length -= 1
+                return True
+            cur = cur.next
+        return False
+
+    def to_list(self) -> list:
+        result, cur = [], self.head
+        while cur:
+            result.append(cur.value)
+            cur = cur.next
+        return result
+
+
+ll = LinkedList()
+ll.prepend(3); ll.prepend(2); ll.prepend(1)
+print(ll.to_list())   # [1, 2, 3]
+ll.remove(2)
+print(ll.to_list())   # [1, 3]`,
+
+  'quick-sort': `def quick_sort(arr: list, low: int = 0, high: int = None) -> list:
+    if high is None:
+        high = len(arr) - 1
+    if low < high:
+        pi = partition(arr, low, high)
+        quick_sort(arr, low, pi - 1)
+        quick_sort(arr, pi + 1, high)
+    return arr
+
+
+def partition(arr: list, low: int, high: int) -> int:
+    pivot = arr[high]
+    i = low - 1
+
+    for j in range(low, high):
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    return i + 1
+
+
+arr = [10, 80, 30, 90, 40, 50, 70]
+print(quick_sort(arr[:]))  # → [10, 30, 40, 50, 70, 80, 90]`,
+
+  'merge-sort': `def merge_sort(arr: list) -> list:
+    if len(arr) <= 1:
+        return arr
+
+    mid = len(arr) // 2
+    left  = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+
+def merge(left: list, right: list) -> list:
+    result, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+arr = [38, 27, 43, 3, 9, 82, 10]
+print(merge_sort(arr))  # → [3, 9, 10, 27, 38, 43, 82]`,
+
+  'graph': `from collections import deque
+
+class Graph:
+    def __init__(self):
+        self.adjacency = {}
+
+    def add_vertex(self, v):
+        if v not in self.adjacency:
+            self.adjacency[v] = []
+
+    def add_edge(self, v1, v2):
+        self.adjacency[v1].append(v2)
+        self.adjacency[v2].append(v1)
+
+    def bfs(self, start) -> list:
+        visited = {start}
+        queue   = deque([start])
+        result  = []
+
+        while queue:
+            v = queue.popleft()
+            result.append(v)
+            for n in self.adjacency.get(v, []):
+                if n not in visited:
+                    visited.add(n)
+                    queue.append(n)
+        return result
+
+    def dfs(self, start, visited=None, result=None) -> list:
+        if visited is None: visited, result = set(), []
+        visited.add(start)
+        result.append(start)
+        for n in self.adjacency.get(start, []):
+            if n not in visited:
+                self.dfs(n, visited, result)
+        return result
+
+
+g = Graph()
+for v in ['A','B','C','D','E']:
+    g.add_vertex(v)
+g.add_edge('A','B'); g.add_edge('A','C')
+g.add_edge('B','D'); g.add_edge('C','E')
+
+print('BFS:', g.bfs('A'))  # ['A', 'B', 'C', 'D', 'E']
+print('DFS:', g.dfs('A'))  # ['A', 'B', 'D', 'C', 'E']`,
+};
+
+// ─── C++ VARIANTS ─────────────────────────────────────────────
+
+const DSA_CPP = {
+  'binary-search': `#include <iostream>
+#include <vector>
+using namespace std;
+
+int binarySearch(const vector<int>& arr, int target) {
+    int left = 0, right = (int)arr.size() - 1;
+
+    while (left <= right) {
+        int mid = left + (right - left) / 2; // avoids overflow
+
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target)  left  = mid + 1;
+        else                    right = mid - 1;
+    }
+    return -1; // not found
+}
+
+int main() {
+    vector<int> arr = {1, 3, 5, 7, 9, 11, 13};
+    cout << binarySearch(arr, 7)  << endl; // 3
+    cout << binarySearch(arr, 6)  << endl; // -1
+    return 0;
+}`,
+
+  'merge-sort': `#include <iostream>
+#include <vector>
+using namespace std;
+
+void merge(vector<int>& arr, int left, int mid, int right) {
+    vector<int> L(arr.begin() + left, arr.begin() + mid + 1);
+    vector<int> R(arr.begin() + mid + 1, arr.begin() + right + 1);
+
+    int i = 0, j = 0, k = left;
+    while (i < L.size() && j < R.size())
+        arr[k++] = (L[i] <= R[j]) ? L[i++] : R[j++];
+    while (i < L.size()) arr[k++] = L[i++];
+    while (j < R.size()) arr[k++] = R[j++];
+}
+
+void mergeSort(vector<int>& arr, int left, int right) {
+    if (left >= right) return;
+    int mid = left + (right - left) / 2;
+    mergeSort(arr, left, mid);
+    mergeSort(arr, mid + 1, right);
+    merge(arr, left, mid, right);
+}
+
+int main() {
+    vector<int> arr = {38, 27, 43, 3, 9, 82, 10};
+    mergeSort(arr, 0, arr.size() - 1);
+    for (int x : arr) cout << x << " "; // 3 9 10 27 38 43 82
+    return 0;
+}`,
+
+  'stack': `#include <iostream>
+#include <stack>
+#include <string>
+using namespace std;
+
+// Custom stack wrapper
+template<typename T>
+class Stack {
+    stack<T> s;
+public:
+    void push(T item)  { s.push(item); }
+    T    pop()         { T top = s.top(); s.pop(); return top; }
+    T    peek()        { return s.top(); }
+    bool isEmpty()     { return s.empty(); }
+    int  size()        { return s.size(); }
+};
+
+// Balanced parentheses checker
+bool isBalanced(const string& str) {
+    Stack<char> stk;
+    for (char ch : str) {
+        if (ch == '(' || ch == '[' || ch == '{') stk.push(ch);
+        else if (!stk.isEmpty()) {
+            char top = stk.pop();
+            if ((ch == ')' && top != '(') ||
+                (ch == ']' && top != '[') ||
+                (ch == '}' && top != '{')) return false;
+        } else return false;
+    }
+    return stk.isEmpty();
+}
+
+int main() {
+    cout << isBalanced("({[]})") << endl; // 1 (true)
+    cout << isBalanced("([)]")   << endl; // 0 (false)
+    return 0;
+}`,
+
+  'merge-sort': `#include <iostream>
+#include <vector>
+using namespace std;
+
+void merge(vector<int>& arr, int l, int m, int r) {
+    vector<int> L(arr.begin()+l, arr.begin()+m+1);
+    vector<int> R(arr.begin()+m+1, arr.begin()+r+1);
+    int i=0, j=0, k=l;
+    while (i<L.size() && j<R.size())
+        arr[k++] = (L[i] <= R[j]) ? L[i++] : R[j++];
+    while (i<L.size()) arr[k++] = L[i++];
+    while (j<R.size()) arr[k++] = R[j++];
+}
+
+void mergeSort(vector<int>& arr, int l, int r) {
+    if (l >= r) return;
+    int m = l + (r-l)/2;
+    mergeSort(arr, l, m);
+    mergeSort(arr, m+1, r);
+    merge(arr, l, m, r);
+}
+
+int main() {
+    vector<int> arr = {38,27,43,3,9,82,10};
+    mergeSort(arr, 0, arr.size()-1);
+    for (int x : arr) cout << x << " "; // 3 9 10 27 38 43 82
+    return 0;
+}`,
+
+  'quick-sort': `#include <iostream>
+#include <vector>
+using namespace std;
+
+int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high], i = low - 1;
+    for (int j = low; j < high; j++)
+        if (arr[j] <= pivot) swap(arr[++i], arr[j]);
+    swap(arr[i + 1], arr[high]);
+    return i + 1;
+}
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+int main() {
+    vector<int> arr = {10, 80, 30, 90, 40, 50, 70};
+    quickSort(arr, 0, arr.size() - 1);
+    for (int x : arr) cout << x << " "; // 10 30 40 50 70 80 90
+    return 0;
+}`,
+};
+
+// Pick the right code + file metadata for the requested language
+function langVariant(key, jsCode) {
+  const LANG_META = {
+    python:     { ext: '.py',  label: 'Python',     base: DSA_PYTHON[key] || jsCode },
+    cpp:        { ext: '.cpp', label: 'C++',         base: DSA_CPP[key]   || jsCode },
+    javascript: { ext: '.js',  label: 'JavaScript',  base: jsCode },
+    java:       { ext: '.js',  label: 'JavaScript',  base: jsCode }, // fallback to JS for now
+  };
+  return LANG_META;
+}
+
 function lineCount(code) {
   return String(code || '').split('\n').length;
 }
@@ -733,14 +1384,9 @@ function createNotePreview(title, body) {
 }
 
 function createOutput({
-  title,
-  summary,
-  files,
-  explanation,
-  steps,
-  tips,
-  complexity,
-  preview,
+  title, summary, files, explanation, steps, tips,
+  complexity, preview, userFlow, concepts, features,
+  trace, inputExample, outputExample, keyInsight,
 }) {
   const normalizedFiles = Array.isArray(files) && files.length > 0
     ? files
@@ -761,6 +1407,13 @@ function createOutput({
     tips,
     complexity,
     preview,
+    userFlow:     Array.isArray(userFlow)  ? userFlow  : [],
+    concepts:     Array.isArray(concepts)  ? concepts  : [],
+    features:     Array.isArray(features)  ? features  : [],
+    trace:        Array.isArray(trace)     ? trace     : [],
+    inputExample: typeof inputExample  === 'string' ? inputExample  : '',
+    outputExample:typeof outputExample === 'string' ? outputExample : '',
+    keyInsight:   typeof keyInsight    === 'string' ? keyInsight    : '',
     stats: {
       lines: lineCount(primaryFile.content),
       files: normalizedFiles.length,
@@ -813,6 +1466,16 @@ function calculatorOutput() {
       pattern: 'State Machine',
       paradigm: 'DOM-driven OOP',
     },
+    userFlow: [
+      'Click a digit or press a number key → display updates immediately',
+      'Click + − × ÷ → first operand saved, operator stored',
+      'Type the second number → input buffer starts fresh',
+      'Press = or Enter → result computed and shown on display',
+      'Press Backspace → last digit removed from buffer',
+      'Click AC → all state cleared, display resets to 0',
+    ],
+    concepts: ['State Machine', 'Event Delegation', 'Keyboard Events', 'DOM API', 'OOP Class', 'Arithmetic Logic'],
+    features: ['Full keyboard shortcuts', 'Expression history row', 'Divide-by-zero handled', 'Decimal precision', 'Backspace support'],
     preview: createLivePreview({
       title: 'Interactive calculator',
       body: 'The preview is rendered from backend-provided HTML, CSS, and JavaScript so the UI, explanation, and code all describe the same artifact.',
@@ -866,6 +1529,16 @@ function todoOutput() {
       pattern: 'Single Source of Truth',
       paradigm: 'Event-driven UI',
     },
+    userFlow: [
+      'Type a task name and press Enter → item added to the top of the list',
+      'Checkbox clicked → item toggled to done, text gets strikethrough',
+      'Delete button clicked → item removed from the array',
+      'render() fires → entire list re-built from current array state',
+      'Open-count badge → auto-updates every time render() runs',
+      'All tasks deleted → empty-state message shown automatically',
+    ],
+    concepts: ['Event Delegation', 'Array State', 'Single Source of Truth', 'Form Handling', 'DOM Re-render', 'OOP Class'],
+    features: ['Add tasks via keyboard', 'Toggle completion state', 'Delete individual tasks', 'Live open-item counter', 'Empty-state feedback'],
     preview: createLivePreview({
       title: 'Interactive todo preview',
       body: 'This preview is fully functional: add tasks, mark them done, and delete them to verify the returned code path.',
@@ -916,6 +1589,15 @@ function timerOutput() {
       pattern: 'State Machine',
       paradigm: 'DOM-driven UI',
     },
+    userFlow: [
+      'Click Start → requestAnimationFrame loop begins ticking',
+      'Each frame: elapsed = now − startTime → formatted MM:SS.t',
+      'Click Pause → frame loop cancelled, elapsed time preserved',
+      'Click Start again → loop resumes from the saved elapsed offset',
+      'Click Reset → elapsed cleared to 0, button label restored',
+    ],
+    concepts: ['requestAnimationFrame', 'Performance API', 'State Machine', 'Timing Math', 'DOM API', 'Closure'],
+    features: ['Sub-second precision', 'Pause and resume', 'Frame-based animation', 'Three-variable state', 'No external libraries'],
     preview: {
       mode: 'live',
       title: 'Interactive stopwatch',
@@ -954,6 +1636,16 @@ function apiClientOutput() {
       pattern: 'Service Wrapper',
       paradigm: 'Async / Await',
     },
+    userFlow: [
+      'new ApiClient(baseUrl) → URL normalized and headers stored',
+      'client.get("/users") → GET method + default headers merged',
+      'client.post("/users", body) → body serialized to JSON automatically',
+      'fetch() executes → response status checked first',
+      'Non-2xx response → rich error thrown with status code + message',
+      '204 No Content → returns null safely, no JSON parse crash',
+    ],
+    concepts: ['Async / Await', 'Fetch API', 'HTTP Methods', 'Error Handling', 'DRY Principle', 'Service Layer'],
+    features: ['Centralized fetch config', 'Auto JSON serialize', 'Status-aware parsing', 'Rich error messages', 'GET / POST / PUT / DELETE'],
     preview: createNotePreview(
       'Code-first output',
       'REST clients are better validated through the code contract than a visual sandbox, so this response focuses on the implementation details.',
@@ -961,12 +1653,13 @@ function apiClientOutput() {
   });
 }
 
-function sortingOutput() {
+function sortingOutput(lang = 'javascript') {
+  const meta = langVariant('merge-sort', MERGE_SORT_CODE)[lang] || langVariant('merge-sort', MERGE_SORT_CODE).javascript;
   return createOutput({
-    title: 'Merge Sort',
+    title: `Merge Sort (${meta.label})`,
     summary: 'A classic divide-and-conquer implementation with a clean merge helper.',
     files: [
-      createFile('merge-sort.js', 'JavaScript', MERGE_SORT_CODE, true),
+      createFile(`merge-sort${meta.ext}`, meta.label, meta.base, true),
     ],
     explanation: 'Merge sort recursively splits the input into smaller halves and then merges those sorted halves back together, producing predictable O(n log n) runtime at the cost of extra memory for the merged output.',
     steps: [
@@ -1042,41 +1735,489 @@ function genericOutput(message) {
   });
 }
 
-function selectOutput(message) {
-  const normalized = message.toLowerCase();
+// Detect visual theme — current message takes priority over history.
+function detectTheme(normalized, historyText = '') {
+  // Check current message first so "change to dark" beats "neo brutalism" in old history.
+  const checks = [
+    [/neo.?brutalism|brutalist|brutal/,        'neo-brutalism'],
+    [/dark.?mode|dark.?theme|dark.?ui|\bdark\b/,'dark'],
+    [/glassmorphism|\bglass\b/,                 'glass'],
+    [/\bminimal\b|\bclean\b/,                   'minimal'],
+    [/\bretro\b|\bvintage\b/,                   'retro'],
+    [/\bneon\b|cyberpunk/,                      'neon'],
+  ];
+  for (const [re, theme] of checks) if (re.test(normalized))   return theme;
+  for (const [re, theme] of checks) if (re.test(historyText))  return theme;
+  return 'default';
+}
 
-  if (normalized.includes('calculator')) {
+const NEO_BRUTALISM_CALC_STYLES = `
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#F5F0E8;font-family:"Arial Black",Arial,sans-serif;display:grid;place-items:center;padding:20px}
+.calc-shell{width:100%;display:grid;place-items:center}
+.calc-card{background:#fff;border:4px solid #000;box-shadow:8px 8px 0 #000;padding:20px;width:min(100%,320px)}
+.calc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;border-bottom:3px solid #000;padding-bottom:10px}
+.calc-header p{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:3px}
+.calc-header span{font-size:9px;color:#555;text-align:right;text-transform:uppercase;letter-spacing:1px;max-width:100px}
+.history{min-height:18px;text-align:right;color:#888;font-family:"Courier New",monospace;font-size:12px;margin-bottom:6px;border-bottom:2px dashed #000;padding-bottom:6px}
+.display{background:#000;color:#F5F500;font-size:44px;text-align:right;padding:14px 12px;margin-bottom:14px;border:4px solid #000;font-family:"Courier New",monospace;font-weight:700;word-break:break-all}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.key{border:3px solid #000;background:#fff;min-height:60px;font-family:"Arial Black",Arial,sans-serif;font-size:18px;font-weight:900;cursor:pointer;box-shadow:4px 4px 0 #000;transition:box-shadow .06s,transform .06s;border-radius:0}
+.key:hover{background:#F5F500}
+.key:active{box-shadow:0 0 0 #000;transform:translate(4px,4px)}
+.key-muted{background:#ddd}
+.key-accent{background:#F5F500}
+.key-wide{grid-column:span 2}
+`;
+
+const DARK_CALC_STYLES = `
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#0d1117;font-family:"Inter",system-ui,sans-serif;display:grid;place-items:center;padding:24px}
+.calc-shell{width:100%;display:grid;place-items:center}
+.calc-card{width:min(100%,340px);background:#161b22;border:1px solid #30363d;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.calc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.calc-header p{font-size:13px;font-weight:600;color:#e6edf3}
+.calc-header span{font-size:11px;color:#8b949e;text-align:right;max-width:110px;line-height:1.4}
+.history{min-height:18px;text-align:right;color:#6e7681;font-family:"JetBrains Mono","Fira Code",monospace;font-size:12px;margin-bottom:6px}
+.display{text-align:right;font-size:44px;line-height:1;font-family:"JetBrains Mono","Fira Code",monospace;color:#58a6ff;margin-bottom:16px;min-height:48px}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.key{border:none;border-radius:10px;min-height:56px;font:inherit;font-size:18px;cursor:pointer;background:#21262d;color:#e6edf3;transition:background .12s,transform .08s}
+.key:hover{background:#30363d}
+.key:active{transform:scale(.96)}
+.key-muted{background:#30363d;color:#8b949e}
+.key-accent{background:linear-gradient(135deg,#1f6feb,#388bfd);color:#fff}
+.key-wide{grid-column:span 2}
+`;
+
+function themedCalculatorOutput(theme) {
+  const styles = theme === 'neo-brutalism' ? NEO_BRUTALISM_CALC_STYLES
+    : theme === 'dark' ? DARK_CALC_STYLES
+    : CALCULATOR_STYLES;
+
+  const themeLabel = {
+    'neo-brutalism': 'Neo-Brutalist',
+    'dark':          'Dark Mode',
+    'default':       'Classic',
+  }[theme] || 'Styled';
+
+  const files = [
+    createFile('index.html', 'HTML', `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${themeLabel} Calculator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    ${CALCULATOR_MARKUP}
+    <script src="calculator.js"></script>
+  </body>
+</html>`),
+    createFile('styles.css', 'CSS', styles),
+    createFile('calculator.js', 'JavaScript', CALCULATOR_CODE, true),
+  ];
+
+  return createOutput({
+    title: `${themeLabel} Calculator`,
+    summary: `A keyboard-enabled calculator with a ${themeLabel.toLowerCase()} design — same state-machine logic, reskinned.`,
+    files,
+    explanation: `This calculator uses a state machine with three variables: the current input buffer, the stored left operand, and the pending operator. The ${themeLabel.toLowerCase()} theme is applied purely through CSS — the JavaScript logic is identical to any other version.`,
+    steps: [
+      'The constructor wires keyboard and button events then renders the initial zero state.',
+      'Digit presses append to the active buffer; duplicate decimals are rejected before state changes.',
+      'Operator clicks store the left operand and write the pending expression to the history row.',
+      'Pressing = resolves the operation, handles divide-by-zero, and pushes the result through render().',
+    ],
+    tips: [
+      'Keep business logic (arithmetic) completely separate from presentation (CSS theme).',
+      'Render from state — never mutate the display directly from multiple code paths.',
+      'CSS custom properties make theme-switching trivial without touching JavaScript.',
+    ],
+    complexity: { level: 'Low', time: 'O(1)', space: 'O(1)', pattern: 'State Machine', paradigm: 'DOM-driven OOP' },
+    userFlow: [
+      'Click digit or press key → display updates immediately',
+      'Click operator → first operand saved, history row shows pending expression',
+      'Type second number → fresh input appears on display',
+      'Press = or Enter → result computed and shown',
+      'Press Backspace → last digit removed from buffer',
+      'Click AC → all state cleared, display resets to 0',
+    ],
+    concepts: ['State Machine', 'Event Delegation', 'Keyboard Events', 'DOM API', 'CSS Theming', 'OOP Class'],
+    features: ['Full keyboard shortcuts', 'History row', 'Divide-by-zero safe', 'Decimal handling', `${themeLabel} design`],
+    preview: createLivePreview({
+      title: `${themeLabel} Calculator`,
+      body: `A live preview of the ${themeLabel.toLowerCase()} calculator with the same keyboard-ready logic.`,
+      markup: CALCULATOR_MARKUP,
+      styles,
+      script: CALCULATOR_CODE,
+    }),
+  });
+}
+
+// ─── DSA OUTPUT FUNCTIONS ────────────────────────────────────
+
+function binarySearchOutput(lang = 'javascript') {
+  const meta = langVariant('binary-search', BINARY_SEARCH_CODE)[lang] || langVariant('binary-search', BINARY_SEARCH_CODE).javascript;
+  return createOutput({
+    title: `Binary Search (${meta.label})`,
+    summary: 'Finds a target in a sorted array in O(log n) by halving the search space on every comparison.',
+    files: [createFile(`binary-search${meta.ext}`, meta.label, meta.base, true)],
+    keyInsight: 'Each comparison eliminates half the remaining candidates — so 1,000,000 elements need at most 20 comparisons.',
+    explanation: 'Binary search keeps two pointers (left, right) around the unsearched window. It checks the middle element and discards the half that cannot contain the target. The window shrinks by half each iteration until the element is found or the window collapses.',
+    steps: [
+      'Start with left=0 and right=array.length−1 bounding the entire array.',
+      'Compute mid = ⌊(left + right) / 2⌋ — the middle index of the current window.',
+      'If arr[mid] equals the target, return mid immediately.',
+      'If arr[mid] < target, discard the left half — set left = mid + 1.',
+      'Otherwise discard the right half — set right = mid − 1.',
+      'If left > right the window is empty; target is absent — return −1.',
+    ],
+    tips: [
+      'Array MUST be sorted — binary search gives wrong answers on unsorted input.',
+      'Use Math.floor((left + right) / 2) to avoid integer overflow in other languages.',
+      'For insertion point problems, return left when the loop ends instead of −1.',
+      'Works on any monotonic function, not just arrays — this is bisect / binary search on answer.',
+    ],
+    complexity: { level: 'Low', time: 'O(log n)', space: 'O(1)', pattern: 'Divide and Conquer', paradigm: 'Iterative' },
+    inputExample: 'sortedArray = [1, 3, 5, 7, 9, 11, 13]  target = 7',
+    outputExample: '3  (arr[3] === 7)',
+    trace: [
+      'left=0  right=6  mid=3 → arr[3]=7 === 7 → FOUND ✓',
+      'If target were 9: left=4  right=6  mid=5 → arr[5]=11 > 9 → right=4',
+      '  left=4  right=4  mid=4 → arr[4]=9 === 9 → FOUND ✓',
+      'If target were 6: window collapses → return −1 (not found)',
+    ],
+    userFlow: [
+      'Pass sorted array + target → algorithm sets up [left, right] window',
+      'mid computed → compared to target → window halved each iteration',
+      'Target found → return index immediately',
+      'Window collapses (left > right) → return −1',
+    ],
+    concepts: ['Binary Search', 'Two Pointers', 'Divide & Conquer', 'Sorted Array', 'O(log n)', 'Iterative'],
+    features: ['O(log n) worst-case', 'O(1) space', 'Works on any sorted sequence', 'No recursion needed', 'Returns index or −1'],
+    preview: createNotePreview('Algorithm output', 'Binary search operates on a sorted array — open the Sandbox tab to explore the code.'),
+  });
+}
+
+function stackOutput(lang = 'javascript') {
+  const meta = langVariant('stack', STACK_CODE)[lang] || langVariant('stack', STACK_CODE).javascript;
+  return createOutput({
+    title: `Stack — LIFO (${meta.label})`,
+    summary: 'A Last-In-First-Out structure with O(1) push, pop, and peek — used for undo, call stacks, and expression parsing.',
+    files: [createFile(`stack${meta.ext}`, meta.label, meta.base, true)],
+    keyInsight: 'The most recently added item is always the first to leave — the same shape as a stack of plates, browser back-history, or the call stack.',
+    explanation: 'A stack wraps a plain array and exposes only four operations. Restricting the interface to push/pop/peek enforces LIFO order and makes the intent explicit. The balanced-parentheses checker shows a canonical real-world use.',
+    steps: [
+      'push(item) — appends to the top of the internal array in O(1).',
+      'pop() — removes and returns the top element in O(1); returns null if empty.',
+      'peek() — reads the top element without removing it; safe on empty stacks.',
+      'isBalanced() uses the stack to match opening and closing brackets in one pass.',
+    ],
+    tips: [
+      'Always check isEmpty() before pop() in production code.',
+      'A stack naturally reverses order — useful for iterative DFS and expression evaluation.',
+      'Min-stack (tracking the current minimum) is a classic interview extension.',
+    ],
+    complexity: { level: 'Low', time: 'O(1)', space: 'O(n)', pattern: 'LIFO', paradigm: 'OOP / Data Structure' },
+    inputExample: 'stack.push(1).push(2).push(3)',
+    outputExample: 'peek() → 3 | pop() → 3 | pop() → 2',
+    trace: [
+      'push(1) → [1]        ← top',
+      'push(2) → [1, 2]     ← top',
+      'push(3) → [1, 2, 3]  ← top',
+      'pop()   → returns 3, stack = [1, 2]',
+      'peek()  → 2, stack unchanged',
+    ],
+    userFlow: [
+      'push(item) → item lands on top of the stack',
+      'peek() → see the top without removing it',
+      'pop() → remove and return top item',
+      'isEmpty() → check before accessing to avoid null errors',
+    ],
+    concepts: ['LIFO', 'Stack ADT', 'Array Wrapper', 'O(1) Operations', 'Recursion Analogy', 'Expression Parsing'],
+    features: ['O(1) push/pop/peek', 'Null-safe on empty', 'Chainable push', 'Balanced bracket checker', 'toArray snapshot'],
+    preview: createNotePreview('Data structure', 'The Stack is a pure code artifact — explore the implementation in the Sandbox tab.'),
+  });
+}
+
+function linkedListOutput(lang = 'javascript') {
+  const meta = langVariant('linked-list', LINKED_LIST_CODE)[lang] || langVariant('linked-list', LINKED_LIST_CODE).javascript;
+  return createOutput({
+    title: `Linked List (${meta.label})`,
+    summary: 'A chain of nodes where each node holds a value and a pointer to the next — O(1) insert at head, O(n) traversal.',
+    files: [createFile(`linked-list${meta.ext}`, meta.label, meta.base, true)],
+    keyInsight: 'Nodes are scattered in memory and connected by pointers — insert at the head is O(1) because you only rewire one pointer.',
+    explanation: 'Each Node stores a value and a next pointer. LinkedList tracks only the head. prepend() rewires one pointer (O(1)); append() must walk to the tail (O(n)); remove() splices out a node by relinking its predecessor. reverse() walks once and flips all pointers.',
+    steps: [
+      'prepend(v): create node, point node.next at current head, move head to node — O(1).',
+      'append(v): walk to the last node (where next === null), attach new node there — O(n).',
+      'remove(v): track the predecessor; when cur.next.value matches, skip it by setting cur.next = cur.next.next — O(n).',
+      'reverse(): walk once swapping next pointers; update head to the old tail — O(n).',
+    ],
+    tips: [
+      'Always handle the empty-list edge case first (head === null).',
+      'Doubly-linked lists add a prev pointer for O(1) removal when you already have the node.',
+      'Slow/fast pointer (Floyd\'s cycle detection) uses two pointers moving at different speeds.',
+      'For interview problems, draw the before/after pointer diagram before writing code.',
+    ],
+    complexity: { level: 'Medium', time: 'O(n) traversal, O(1) prepend', space: 'O(n)', pattern: 'Pointer Manipulation', paradigm: 'OOP' },
+    inputExample: 'list.prepend(3).prepend(2).prepend(1) → 1 → 2 → 3',
+    outputExample: 'list.reverse().toArray() → [3, 2, 1]',
+    trace: [
+      'prepend(1): head → [1|→null]',
+      'prepend(2): head → [2|→1] → [1|→null]',
+      'prepend(3): head → [3|→2] → [2|→1] → [1|→null]',
+      'reverse():  head → [1|→2] → [2|→3] → [3|→null]',
+      'toArray():  [1, 2, 3]',
+    ],
+    userFlow: [
+      'prepend(value) → new node becomes the head in O(1)',
+      'append(value) → walk to tail, attach node in O(n)',
+      'remove(value) → scan list, splice node by relinking in O(n)',
+      'reverse() → flip all pointers in a single O(n) pass',
+      'toArray() → collect all values for inspection',
+    ],
+    concepts: ['Pointer Manipulation', 'Singly Linked', 'Node / Reference', 'O(1) Head Insert', 'Traversal', 'Reversal'],
+    features: ['O(1) prepend', 'O(n) append / remove', 'In-place reverse', 'Null-safe ops', 'toArray snapshot'],
+    preview: createNotePreview('Data structure', 'Linked list nodes live in the code — explore via the Sandbox tab.'),
+  });
+}
+
+function quickSortOutput(lang = 'javascript') {
+  const meta = langVariant('quick-sort', QUICK_SORT_CODE)[lang] || langVariant('quick-sort', QUICK_SORT_CODE).javascript;
+  return createOutput({
+    title: `Quick Sort (${meta.label})`,
+    summary: 'In-place divide-and-conquer sort averaging O(n log n) by partitioning around a pivot.',
+    files: [createFile(`quick-sort${meta.ext}`, meta.label, meta.base, true)],
+    keyInsight: 'Pick a pivot, place every smaller element left of it and every larger element right — then recurse on each side. The pivot is in its final position after partition.',
+    explanation: 'quickSort divides the array around a pivot (here the last element). partition() rearranges elements so everything ≤ pivot sits left and everything > pivot sits right, returning the pivot\'s final index. Recursive calls sort each half until subarrays of size 1 remain.',
+    steps: [
+      'Choose the last element as the pivot (other strategies: first, median-of-three, random).',
+      'partition() sweeps left to right — elements ≤ pivot are swapped into the left region.',
+      'Place the pivot at the boundary between the two regions (index i+1).',
+      'Recursively quickSort the left subarray [low … pivotIndex−1].',
+      'Recursively quickSort the right subarray [pivotIndex+1 … high].',
+    ],
+    tips: [
+      'Worst case O(n²) happens on already-sorted input with the last-element pivot — use random pivot to avoid this.',
+      'Quick sort is often faster than merge sort in practice because it is cache-friendly and in-place.',
+      'For tiny subarrays (≤ 10 elements), switch to insertion sort for a real speedup.',
+      'Quick select (a variant) finds the k-th smallest element in expected O(n).',
+    ],
+    complexity: { level: 'Medium', time: 'O(n log n) avg / O(n²) worst', space: 'O(log n) stack', pattern: 'Divide and Conquer', paradigm: 'Recursion + In-place' },
+    inputExample: '[10, 80, 30, 90, 40, 50, 70]',
+    outputExample: '[10, 30, 40, 50, 70, 80, 90]',
+    trace: [
+      'pivot=70  partition → [10, 30, 40, 50, 70, 80, 90]  pivot lands at index 4',
+      'Left  [10, 30, 40, 50]: pivot=50 → [10, 30, 40, 50] sorted',
+      'Right [80, 90]:          pivot=90 → [80, 90] sorted',
+      'Combined → [10, 30, 40, 50, 70, 80, 90] ✓',
+    ],
+    userFlow: [
+      'quickSort([10,80,30,90,40,50,70]) called',
+      'partition chooses pivot=70, sweeps array → pivot at index 4',
+      'Recursively sort left half [10,80,30,90,40] and right half [80,90]',
+      'Base case: subarrays of size 1 need no sorting',
+      'Array sorted in-place — same memory, no extra array needed',
+    ],
+    concepts: ['Divide & Conquer', 'In-place Sort', 'Pivot Selection', 'Partition', 'Recursion', 'O(n log n) avg'],
+    features: ['In-place (O(log n) stack)', 'O(n log n) average', 'Cache-friendly', 'Customizable pivot', 'Classic interview algorithm'],
+    preview: createNotePreview('Algorithm', 'Quick sort operates in-place — examine the partition logic in the Sandbox tab.'),
+  });
+}
+
+function hashMapOutput() {
+  return createOutput({
+    title: 'Hash Map',
+    summary: 'O(1) average get/set/delete using a hash function to map keys to bucket indices.',
+    files: [createFile('hash-map.js', 'JavaScript', HASH_MAP_CODE, true)],
+    keyInsight: 'A hash function converts any key into an array index — collisions are handled by chaining (each bucket is a list of entries).',
+    explanation: 'HashMap computes a bucket index from the key using a polynomial hash (h = h*31 + charCode). Each bucket is an array of [key, value] pairs to handle collisions via chaining. set() updates an existing entry or appends a new pair. get() finds the entry in O(1) expected time.',
+    steps: [
+      'hash(key) multiplies a running hash by 31 and adds the char code — a classic polynomial hash.',
+      'set(key, value) finds the bucket, searches for an existing entry and updates it, or appends a new pair.',
+      'get(key) hashes the key, scans the (usually short) bucket for the matching key.',
+      'delete(key) splices the entry out of its bucket array.',
+    ],
+    tips: [
+      'Load factor (size / capacity) determines when to resize — resize at 0.75 for balanced performance.',
+      'The polynomial 31 is prime, which reduces hash collisions.',
+      'In JavaScript you can use a plain object {} or Map for most use cases — implement HashMap when you need to understand internals.',
+      'Open addressing (probing) is an alternative to chaining — used by many C++ implementations.',
+    ],
+    complexity: { level: 'Medium', time: 'O(1) average, O(n) worst', space: 'O(n)', pattern: 'Hash Table', paradigm: 'Hashing + Chaining' },
+    inputExample: 'map.set("name", "Alice").set("age", 30)',
+    outputExample: 'map.get("name") → "Alice"  |  map.has("age") → true',
+    trace: [
+      'set("name","Alice"): hash("name")=3 → bucket[3].push(["name","Alice"])',
+      'set("age", 30):      hash("age")=7  → bucket[7].push(["age", 30])',
+      'get("name"):         hash("name")=3 → bucket[3].find(k==="name") → "Alice"',
+      'delete("age"):       hash("age")=7  → splice entry from bucket[7]',
+    ],
+    userFlow: [
+      'set(key, value) → hash key to bucket index → store or update pair',
+      'get(key) → hash key → scan bucket → return value or undefined',
+      'has(key) → get(key) !== undefined',
+      'delete(key) → splice entry from bucket',
+    ],
+    concepts: ['Hash Function', 'Collision Chaining', 'O(1) Lookup', 'Polynomial Hash', 'Bucket Array', 'Key-Value Store'],
+    features: ['O(1) avg set/get/delete', 'Collision handling via chaining', 'keys() / values() / entries()', 'Custom hash function', 'Any primitive key'],
+    preview: createNotePreview('Data structure', 'HashMap is a code-first artifact — explore the hash and chaining logic in the Sandbox tab.'),
+  });
+}
+
+function graphOutput(lang = 'javascript') {
+  const meta = langVariant('graph', GRAPH_CODE)[lang] || langVariant('graph', GRAPH_CODE).javascript;
+  return createOutput({
+    title: `Graph — BFS & DFS (${meta.label})`,
+    summary: 'Adjacency-list graph with breadth-first search (level order) and depth-first search (full path exploration).',
+    files: [createFile(`graph${meta.ext}`, meta.label, meta.base, true)],
+    keyInsight: 'BFS uses a queue (FIFO) so it explores level by level — ideal for shortest path. DFS uses the call stack (LIFO recursion) so it goes as deep as possible first.',
+    explanation: 'The graph stores an adjacency list (Map of vertex → neighbor array). BFS starts at a source, enqueues it, then repeatedly dequeues a vertex and enqueues its unvisited neighbors — producing level-order traversal. DFS marks the current vertex and recurses into each unvisited neighbor.',
+    steps: [
+      'addVertex(v): create an empty neighbor list for v if it does not exist yet.',
+      'addEdge(v1, v2): push v2 into v1\'s list and v1 into v2\'s list (undirected).',
+      'BFS: dequeue vertex, record it, enqueue unvisited neighbors — repeat until queue empty.',
+      'DFS: mark vertex as visited, record it, recurse into each unvisited neighbor.',
+    ],
+    tips: [
+      'BFS gives shortest path in an unweighted graph — DFS does not.',
+      'Use a visited Set to avoid infinite loops in cyclic graphs.',
+      'For directed graphs, remove the symmetric addEdge line.',
+      'Dijkstra\'s algorithm extends BFS with a priority queue for weighted shortest paths.',
+    ],
+    complexity: { level: 'Medium', time: 'O(V + E)', space: 'O(V)', pattern: 'Graph Traversal', paradigm: 'Queue (BFS) / Recursion (DFS)' },
+    inputExample: 'Vertices: A B C D E  |  Edges: A-B, A-C, B-D, C-E  |  Start: A',
+    outputExample: 'BFS: [A, B, C, D, E]  |  DFS: [A, B, D, C, E]',
+    trace: [
+      'BFS — queue: [A]  visited: {A}',
+      '  Dequeue A → enqueue neighbors B, C  →  queue: [B, C]  result: [A]',
+      '  Dequeue B → enqueue D              →  queue: [C, D]  result: [A, B]',
+      '  Dequeue C → enqueue E              →  queue: [D, E]  result: [A, B, C]',
+      '  Dequeue D → no new neighbors       →  queue: [E]     result: [A, B, C, D]',
+      '  Dequeue E → queue empty            →  result: [A, B, C, D, E] ✓',
+    ],
+    userFlow: [
+      'Build graph: addVertex + addEdge',
+      'BFS(start) → level-by-level exploration via queue',
+      'DFS(start) → deep-path exploration via recursion',
+      'visited Set prevents revisiting nodes in cycles',
+    ],
+    concepts: ['Adjacency List', 'BFS Queue', 'DFS Recursion', 'Visited Set', 'O(V+E)', 'Graph Theory'],
+    features: ['Undirected graph', 'BFS (shortest path shape)', 'DFS (recursive)', 'Cycle-safe via visited Set', 'Easy to extend to directed/weighted'],
+    preview: createNotePreview('Algorithm', 'Graph traversal is best studied through the code — open the Sandbox tab to trace BFS and DFS.'),
+  });
+}
+
+// selectOutput picks a canned response based on the message text.
+// It also checks recent history so follow-up messages like
+// "change the theme" or "make it dark" still resolve to the right product.
+function selectOutput(message, history) {
+  const normalized = message.toLowerCase();
+  const lang       = detectLang(normalized); // language from CURRENT message only
+
+  // History text — used ONLY for UI follow-ups like "change theme" or "make it dark".
+  // DSA routes intentionally do NOT use this to avoid history pollution.
+  const historyText = (Array.isArray(history) ? history : [])
+    .slice(-8)
+    .map(m => String(m.content || '').toLowerCase())
+    .join(' ');
+
+  // theme: current message wins; history is fallback for "change to dark" follow-ups
+  const theme    = detectTheme(normalized, historyText);
+  // combined = current + history — only used for UI/product context
+  const combined = normalized + ' ' + historyText;
+
+  // ══════════════════════════════════════════════════════════════
+  // STEP 1 — DSA routes check ONLY the current message (normalized).
+  // This prevents history like "calculator" or "neo brutalism" from
+  // hijacking a fresh DSA question like "teach me 2pointer merge sort".
+  // ══════════════════════════════════════════════════════════════
+
+  if (/binary.?search|bisect/.test(normalized)) {
     return {
-      reply: 'I generated a keyboard-enabled calculator and attached a real preview payload so the code, explanation, and running UI stay aligned.',
-      output: calculatorOutput(),
+      reply: `Binary search cuts the search space in half on every step — O(log n) even for a million elements. Here it is in ${lang === 'python' ? 'Python' : lang === 'cpp' ? 'C++' : 'JavaScript'}.`,
+      output: binarySearchOutput(lang),
     };
   }
 
-  if (normalized.includes('todo')) {
+  if (/\bstack\b|lifo|balanced.?paren/.test(normalized)) {
     return {
-      reply: 'I built a working todo app artifact with delegated events and a live preview that matches the returned files.',
+      reply: 'Here is a Stack (LIFO) with a real-world balanced-parentheses checker included.',
+      output: stackOutput(lang),
+    };
+  }
+
+  if (/linked.?list|linkedlist|singly.?linked|doubly.?linked/.test(normalized)) {
+    return {
+      reply: 'Here is a Linked List with prepend, append, remove, and in-place reverse.',
+      output: linkedListOutput(lang),
+    };
+  }
+
+  if (/quick.?sort|quicksort/.test(normalized)) {
+    return {
+      reply: 'Quick sort partitions in-place around a pivot — O(n log n) average with O(log n) stack space.',
+      output: quickSortOutput(lang),
+    };
+  }
+
+  if (/hash.?map|hashmap|hash.?table|hashtable/.test(normalized)) {
+    return {
+      reply: 'Here is a HashMap built from scratch — polynomial hashing with chaining for collision handling.',
+      output: hashMapOutput(),
+    };
+  }
+
+  if (/\bgraph\b|\bbfs\b|\bdfs\b|breadth.?first|depth.?first|adjacency/.test(normalized)) {
+    return {
+      reply: 'Here is a Graph with BFS (level-order) and DFS (deep-path) traversal — both explained step by step.',
+      output: graphOutput(lang),
+    };
+  }
+
+  // sort/merge/algorithm check — also current message only to avoid false positives
+  if (/\bsort\b|merge.?sort|two.?pointer|2.?pointer|\brecurs|\bdynamic.?program|\bgreedy\b/.test(normalized)
+      || /\balgorithm\b/.test(normalized)) {
+    return {
+      reply: 'Merge sort splits the array recursively and merges sorted halves — O(n log n) with predictable worst-case.',
+      output: sortingOutput(lang),
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // STEP 2 — UI / product routes use combined (history matters here).
+  // "change theme to dark" needs history to know we were on calculator.
+  // ══════════════════════════════════════════════════════════════
+
+  if (combined.includes('calculator') || combined.includes('calc')) {
+    return {
+      reply: theme !== 'default'
+        ? `Here is your ${theme.replace('-', ' ')} calculator — same logic, completely reskinned.`
+        : 'I generated a keyboard-enabled calculator with keyboard shortcuts and a live preview.',
+      output: themedCalculatorOutput(theme),
+    };
+  }
+
+  if (combined.includes('todo') || combined.includes('task list') || combined.includes('checklist')) {
+    return {
+      reply: 'I built a working todo app with delegated events and a live preview.',
       output: todoOutput(),
     };
   }
 
-  if (normalized.includes('timer') || normalized.includes('stopwatch')) {
+  if (combined.includes('timer') || combined.includes('stopwatch') || combined.includes('countdown')) {
     return {
       reply: 'I built a stopwatch-style timer with start, pause, and reset controls plus a live preview.',
       output: timerOutput(),
     };
   }
 
-  if (normalized.includes('rest api') || normalized.includes('api client')) {
+  if (combined.includes('rest api') || combined.includes('api client') || combined.includes('fetch wrapper')) {
     return {
       reply: 'I returned a reusable REST client wrapper with the transport logic centralized into one request layer.',
       output: apiClientOutput(),
-    };
-  }
-
-  if (normalized.includes('sort')) {
-    return {
-      reply: 'I used merge sort here because it is a compact example of divide-and-conquer with predictable runtime.',
-      output: sortingOutput(),
     };
   }
 
@@ -1096,7 +2237,8 @@ function generateAssistantReply(input = {}) {
     throw error;
   }
 
-  const selected = selectOutput(message);
+  // Pass history into selectOutput so follow-up messages have context
+  const selected = selectOutput(message, history);
 
   return {
     reply: selected.reply,

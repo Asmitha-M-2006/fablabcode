@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Terminal, Copy, Layers, Check, Play, BookOpen, Code2, Eye } from 'lucide-react';
+import {
+  BigOGraph, ComplexityBreakdown, FlowDiagram, FileArchitecture,
+  UserInteractionFlow, ConceptChips, FeatureList, AlgorithmTrace,
+} from './PlanVisualization';
 
 const TABS = [
   { id: 'plan',    label: 'Plan',    Icon: BookOpen },
@@ -132,60 +136,86 @@ function OutputPanel({ output }) {
       {/* ── TAB: PLAN ──────────────────────────── */}
       {activeTab === 'plan' && (
         <div className="tab-pane plan-pane">
+
+          {/* ── Title + Summary ── */}
           <div className="plan-summary-block">
-            <p className="plan-title">{output.title}</p>
+            <div className="plan-title-row">
+              <p className="plan-title">{output.title}</p>
+              {output.complexity?.level && (
+                <span className={`plan-level-badge lvl-${(output.complexity.level || '').toLowerCase()}`}>
+                  {output.complexity.level} complexity
+                </span>
+              )}
+            </div>
             <p className="plan-summary">{output.summary}</p>
           </div>
 
+          {/* ── Explanation ── */}
           {output.explanation && (
-            <div className="plan-section">
-              <h4 className="plan-section-title">How it works</h4>
-              <p className="plan-text">{output.explanation}</p>
+            <div className="plan-explanation-card">
+              <div className="plan-explanation-glyph">✦</div>
+              <div className="plan-explanation-body">
+                <span className="plan-explanation-eyebrow">How it works</span>
+                <p className="plan-explanation-text">{output.explanation}</p>
+              </div>
             </div>
           )}
 
-          {Array.isArray(output.steps) && output.steps.length > 0 && (
-            <div className="plan-section">
-              <h4 className="plan-section-title">Implementation steps</h4>
-              <ol className="plan-steps">
-                {output.steps.map((step, i) => (
-                  <li key={i} className="plan-step">
-                    <span className="plan-step-num">{i + 1}</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+          {/* ── Algorithm Trace (DSA) ── */}
+          {(output.trace?.length > 0 || output.inputExample || output.keyInsight) && (
+            <AlgorithmTrace
+              trace={output.trace}
+              inputExample={output.inputExample}
+              outputExample={output.outputExample}
+              keyInsight={output.keyInsight}
+            />
           )}
 
-          {Array.isArray(output.tips) && output.tips.length > 0 && (
-            <div className="plan-section plan-tips-block">
-              <h4 className="plan-section-title">Best practices</h4>
-              <ul className="plan-tips">
-                {output.tips.map((tip, i) => <li key={i}>{tip}</li>)}
-              </ul>
-            </div>
+          {/* ── Product / User Interaction Flow ── */}
+          {Array.isArray(output.userFlow) && output.userFlow.length > 0 && (
+            <UserInteractionFlow userFlow={output.userFlow} />
           )}
 
+          {/* ── Concepts + Features side by side ── */}
+          {(Array.isArray(output.concepts) && output.concepts.length > 0) ||
+           (Array.isArray(output.features) && output.features.length > 0) ? (
+            <div className="viz-duo-grid">
+              <ConceptChips concepts={output.concepts} />
+              <FeatureList features={output.features} />
+            </div>
+          ) : null}
+
+          {/* ── Complexity Visualizations ── */}
           {output.complexity && (
-            <div className="plan-section">
-              <h4 className="plan-section-title">Complexity</h4>
-              <div className="plan-complexity">
-                {[
-                  ['Level',     output.complexity.level],
-                  ['Time',      output.complexity.time],
-                  ['Space',     output.complexity.space],
-                  ['Pattern',   output.complexity.pattern],
-                  ['Paradigm',  output.complexity.paradigm],
-                ].map(([k, v]) => (
-                  <div key={k} className="plan-complexity-item">
-                    <span className="plan-complexity-key">{k}</span>
-                    <span className="plan-complexity-val">{v}</span>
+            <div className="viz-duo-grid">
+              <BigOGraph complexity={output.complexity} />
+              <ComplexityBreakdown complexity={output.complexity} />
+            </div>
+          )}
+
+          {/* ── Execution Flow Diagram ── */}
+          {Array.isArray(output.steps) && output.steps.length > 0 && (
+            <FlowDiagram steps={output.steps} />
+          )}
+
+          {/* ── File Architecture ── */}
+          <FileArchitecture files={files} />
+
+          {/* ── Best Practices ── */}
+          {Array.isArray(output.tips) && output.tips.length > 0 && (
+            <div className="viz-tips-block">
+              <p className="viz-section-label">Best Practices</p>
+              <div className="viz-tips-grid">
+                {output.tips.map((tip, i) => (
+                  <div key={i} className="viz-tip-card">
+                    <span className="viz-tip-num">{i + 1}</span>
+                    <span className="viz-tip-text">{tip}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
         </div>
       )}
 

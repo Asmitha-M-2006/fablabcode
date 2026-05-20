@@ -193,6 +193,13 @@ function normalizeOutput(payload, providerLabel = 'AI provider') {
         pattern: String(output.complexity?.pattern || 'General').trim(),
         paradigm: String(output.complexity?.paradigm || 'JavaScript').trim(),
       },
+      userFlow:     normalizeStringArray(output.userFlow, []),
+      concepts:     normalizeStringArray(output.concepts, []),
+      features:     normalizeStringArray(output.features, []),
+      trace:        normalizeStringArray(output.trace, []),
+      inputExample: String(output.inputExample  || '').trim(),
+      outputExample:String(output.outputExample || '').trim(),
+      keyInsight:   String(output.keyInsight    || '').trim(),
       preview,
       stats: {
         lines: countLines(primaryFile.content),

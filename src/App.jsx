@@ -13,7 +13,7 @@
 // → 'sandbox', and React re-renders the matching page component.
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 // Layout components (always visible)
 import Navbar      from './components/Navbar';
@@ -48,14 +48,13 @@ function App() {
   }
 
   // ── showToast(message, duration) ─────────────────────────
-  // Shows a temporary notification at the bottom of the screen.
-  // After `duration` milliseconds, it hides automatically.
-  function showToast(message, duration = 2400) {
+  // useCallback gives this a stable reference so child components
+  // that list it as a dependency (e.g. loadHistory) don't re-run
+  // every time App re-renders due to toast state changing.
+  const showToast = useCallback((message, duration = 2400) => {
     setToast({ show: true, message });
-
-    // setTimeout schedules the hide after `duration` ms
     setTimeout(() => setToast({ show: false, message: '' }), duration);
-  }
+  }, []);
 
   // ── RENDER ────────────────────────────────────────────────
   // React reads this JSX and builds the DOM.

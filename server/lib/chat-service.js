@@ -77,7 +77,7 @@ async function generateProviderPayload({ provider, message, recentHistory, model
 //   3. Call the AI provider
 //   4. Save user + AI messages to the database
 //   5. Return the full payload to the caller
-async function createChatReply({ message, modelOverride, apiKeyOverride }) {
+async function createChatReply({ message, modelOverride, apiKeyOverride, providedHistory }) {
   // Clean up the message — remove leading/trailing whitespace
   const trimmedMessage = String(message || '').trim();
 
@@ -86,9 +86,13 @@ async function createChatReply({ message, modelOverride, apiKeyOverride }) {
     throw createHttpError(400, 'Message is required');
   }
 
-  // Load the last 12 messages as context for the AI
-  // This gives the AI "memory" of the recent conversation
-  const recentHistory = await listChatMessages(12);
+  // Use the context the frontend explicitly sent (its current session window).
+  // This lets the frontend control what the AI remembers: clearing the chat
+  // resets the context array to [] → AI starts fresh, but DB is untouched.
+  // Fall back to DB history only when the frontend sends nothing.
+  const recentHistory = (Array.isArray(providedHistory) && providedHistory.length > 0)
+    ? providedHistory.slice(-12)
+    : await listChatMessages(12);
 
   // Find out which AI provider to use (from config / env vars)
   const config   = getConfig();

@@ -42,28 +42,20 @@ function SandboxMode({ showToast }) {
   // on every render (only recreates if showToast changes).
   const loadHistory = useCallback(async () => {
     try {
-      // GET /api/chat/history — returns { messages: [...] }
       const result = await api.get('/chat/history');
       const msgs   = Array.isArray(result.messages) ? result.messages : [];
       setMessages(msgs);
 
-      // Find the most recent assistant message that has an artifact (code output)
-      // .reverse() + .find() are Higher-Order Functions
       const latestArtifact = [...msgs].reverse().find(
         m => m.role === 'assistant' && m.artifact
       );
-
-      // If one exists, display it in the output panel right away
       if (latestArtifact?.artifact) {
         setCurrentOutput(latestArtifact.artifact);
       }
-
     } catch (error) {
-      // Error handling — if the backend is down, show a toast
       console.error('Failed to load history:', error);
-      showToast('Failed to load chat history');
     }
-  }, [showToast]);
+  }, []); // no deps — must only run once on mount, never again
 
   // Run loadHistory once when the component first mounts
   useEffect(() => {
@@ -83,13 +75,31 @@ function SandboxMode({ showToast }) {
       content:   text,
       createdAt: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    // Capture current messages BEFORE the state update so we can send
+    // them as context — this is the conversation the AI should remember.
+    // Using a functional ref via setMessages to read latest state safely.
+    let contextSnapshot = [];
+    setMessages(prev => {
+      contextSnapshot = prev;
+      return [...prev, userMsg];
+    });
     setIsBusy(true); // show the typing indicator
 
     try {
-      // Build the request body
-      // Include the selected model and (if set) the custom API key
-      const body = { message: text, model: selectedModel };
+      // Build the request body — include conversation context so the AI
+      // knows what was discussed before (e.g. "change theme to dark" knows
+      // we were talking about the calculator).
+      const body = {
+        message: text,
+        model:   selectedModel,
+        // Send the last 10 messages as explicit context. When the user
+        // clicks Clear, this array is empty → AI gets a fresh start.
+        history: contextSnapshot.slice(-10).map(m => ({
+          role:    m.role,
+          content: m.content,
+        })),
+      };
       if (apiKey.trim()) body.apiKey = apiKey.trim();
 
       // POST /api/chat — async/await waits for the AI response
@@ -131,16 +141,13 @@ function SandboxMode({ showToast }) {
   };
 
   // ── clearChat ─────────────────────────────────────────────
-  // Wipes the chat history from the backend and clears the UI.
-  const clearChat = async () => {
-    try {
-      await api.delete('/chat/history'); // DELETE /api/chat/history
-      setMessages([]);       // clear chat bubbles
-      setCurrentOutput(null); // clear the output panel
-      showToast('Chat history cleared');
-    } catch (error) {
-      showToast(error.message);
-    }
+  // Clears the current chat UI and AI context WITHOUT deleting the
+  // persistent history. The History page still shows everything.
+  // On the next message, the AI gets an empty context → fresh start.
+  const clearChat = () => {
+    setMessages([]);        // clear chat bubbles (AI loses context)
+    setCurrentOutput(null); // clear the output panel
+    showToast('New conversation started — history is preserved');
   };
 
   // ── RENDER ────────────────────────────────────────────────

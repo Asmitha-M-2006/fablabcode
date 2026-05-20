@@ -13,26 +13,20 @@
 // ─────────────────────────────────────────────────────────────
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Trash2, Sparkles, User, Loader } from 'lucide-react';
-import { debounce }  from '../utils/debounce';
-import { throttle } from '../utils/throttle';
-import { api }       from '../utils/api';
+import { debounce } from '../utils/debounce';
+import { api }      from '../utils/api';
 
-const PAGE_SIZE   = 8;   // messages per pagination page
-const SCROLL_STEP = 8;   // messages revealed per infinite-scroll batch
+const PAGE_SIZE = 8;
 
 function HistoryPage({ showToast }) {
   // All messages from the backend
   const [messages, setMessages]     = useState([]);
   // What the user typed in the search box (after debounce delay)
   const [search, setSearch]         = useState('');
-  // 'pagination' or 'infinite'
-  const [mode, setMode]             = useState('pagination');
   const [currentPage, setCurrentPage] = useState(1);
-  const [visibleCount, setVisibleCount] = useState(SCROLL_STEP);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
 
-  // Ref to the scrollable container (used for infinite scroll)
   const scrollRef = useRef(null);
 
   // Load messages when page mounts
@@ -87,53 +81,7 @@ function HistoryPage({ showToast }) {
   // Pagination: total pages based on filtered count
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
-  // Which messages to actually show depends on mode
-  const displayed = mode === 'pagination'
-    ? filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-    : filtered.slice(0, visibleCount);
-
-  // ── THROTTLE + INFINITE SCROLL ────────────────────────────
-  // The scroll event fires very frequently (60+/s).
-  // We throttle the handler to fire at most once every 200ms.
-  const onScroll = useCallback(
-    throttle(() => {
-      const el = scrollRef.current;
-      if (!el || mode !== 'infinite') return;
-      const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 150;
-      if (nearBottom) {
-        // Reveal the next batch of messages
-        setVisibleCount(prev => Math.min(prev + SCROLL_STEP, filtered.length));
-      }
-    }, 200), // throttle: run at most once per 200ms
-    [mode, filtered.length]
-  );
-
-  // THROTTLE — window resize (demonstrates throttle in a second place)
-  useEffect(() => {
-    const handleResize = throttle(() => {
-      // In a real app we might recalculate layout here.
-      // For demonstration: log that throttle is working.
-      console.log('resize — throttled handler fired');
-    }, 500);
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Attach throttled scroll listener
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) {
-      el.addEventListener('scroll', onScroll);
-      return () => el.removeEventListener('scroll', onScroll);
-    }
-  }, [onScroll]);
-
-  // Reset counts when mode changes
-  useEffect(() => {
-    setCurrentPage(1);
-    setVisibleCount(SCROLL_STEP);
-  }, [mode]);
+  const displayed = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Format ISO timestamp to readable time
   function fmtTime(ts) {
@@ -147,12 +95,6 @@ function HistoryPage({ showToast }) {
       <div className="history-header">
         <h2 className="page-h2">Chat History</h2>
         <span className="history-count">{filtered.length} messages</span>
-
-        {/* Mode toggle */}
-        <div className="mode-toggle-strip">
-          <button className={mode === 'pagination' ? 'active' : ''} onClick={() => setMode('pagination')}>Pagination</button>
-          <button className={mode === 'infinite'   ? 'active' : ''} onClick={() => setMode('infinite')}>Infinite Scroll</button>
-        </div>
 
         {/* Clear button — DOM event */}
         {messages.length > 0 && (
@@ -213,15 +155,8 @@ function HistoryPage({ showToast }) {
         ))}
       </div>
 
-      {/* Infinite scroll loading hint */}
-      {mode === 'infinite' && visibleCount < filtered.length && (
-        <div className="scroll-hint">
-          <Loader size={16} className="spin" /> Scroll down for more…
-        </div>
-      )}
-
       {/* PAGINATION controls */}
-      {mode === 'pagination' && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="pagination">
           <button
             className="page-btn"

@@ -77,9 +77,13 @@ async function routeRequest({ method, pathname, headers = {}, body = {} }) {
   // We pass it to chat-service which calls the AI and returns the reply.
   if (method === 'POST' && pathname === '/api/chat') {
     const payload = await createChatReply({
-      message:      body.message,
-      modelOverride: body.model  || null, // optional model override from frontend
-      apiKeyOverride: body.apiKey || null, // optional API key override from frontend
+      message:         body.message,
+      modelOverride:   body.model    || null,
+      apiKeyOverride:  body.apiKey   || null,
+      // Frontend sends its current session messages as explicit context.
+      // This ensures follow-up messages ("change the theme") carry context
+      // and Clear resets context without wiping the DB.
+      providedHistory: Array.isArray(body.history) ? body.history : null,
     });
     return { statusCode: 200, body: payload };
   }
