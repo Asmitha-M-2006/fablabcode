@@ -21,7 +21,7 @@
 // → 'sandbox', and React re-renders the matching page component.
 // ============================================================
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 // Layout components (always visible on every page)
 import Navbar      from './components/Navbar';
@@ -36,13 +36,21 @@ import HistoryPage from './pages/HistoryPage';
 import GCodePage   from './pages/GCodePage';
 
 function App() {
-  // ── ROUTING STATE ─────────────────────────────────────────
-  // `page` holds a string that says which page is currently shown.
-  // Possible values: 'home' | 'sandbox' | 'history' | 'gcode'
-  // We start on the Home page ('home').
-  // When setPage is called, React re-renders App and the correct
-  // page component is rendered by the conditional blocks below.
   const [page, setPage] = useState('home');
+
+  // ── THEME STATE ───────────────────────────────────────────
+  // Read saved preference from localStorage, default to 'light'
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  // Apply theme to <html> data-theme attribute whenever it changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => t === 'light' ? 'dark' : 'light');
+  }, []);
 
   // ── TOAST STATE ───────────────────────────────────────────
   // A toast is a small pop-up message at the bottom of the screen.
@@ -93,7 +101,7 @@ function App() {
       {/* Navbar is always visible at the top of every page.
           It receives `currentPage` to highlight the active nav tab,
           and `navigate` so its link buttons can switch pages. */}
-      <Navbar currentPage={page} navigate={navigate} />
+      <Navbar currentPage={page} navigate={navigate} theme={theme} toggleTheme={toggleTheme} />
 
       {/* Main content area — only the active page renders.
           React unmounts the old page and mounts the new one

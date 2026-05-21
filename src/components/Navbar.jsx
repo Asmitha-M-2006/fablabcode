@@ -11,7 +11,7 @@
 // ============================================================
 
 import React from 'react';
-import { Home, Cpu, History, Terminal } from 'lucide-react'; // icon library
+import { Home, Cpu, History, Terminal, Sun, Moon } from 'lucide-react';
 
 // ── LINKS array ───────────────────────────────────────────
 // Each object describes one nav link:
@@ -30,7 +30,7 @@ const LINKS = [
 // ── Props ─────────────────────────────────────────────────
 // currentPage — the active page string (e.g. 'sandbox')
 // navigate    — function from App.jsx to switch pages
-function Navbar({ currentPage, navigate }) {
+function Navbar({ currentPage, navigate, theme, toggleTheme }) {
   return (
     <nav className="navbar">
 
@@ -52,14 +52,19 @@ function Navbar({ currentPage, navigate }) {
       <div className="nav-links">
         {LINKS.map(({ page, label, Icon }) => (
           <button
-            key={page}                                          // React needs a unique key
-            className={`nav-link ${currentPage === page ? 'active' : ''}`} // add 'active' class when selected
-            onClick={() => navigate(page)}                      // DOM click event → switch page
+            key={page}
+            className={`nav-link ${currentPage === page ? 'active' : ''}`}
+            onClick={() => navigate(page)}
           >
-            <Icon size={14} />   {/* icon component from Lucide */}
-            <span>{label}</span> {/* text label */}
+            <Icon size={14} />
+            <span>{label}</span>
           </button>
         ))}
+
+        {/* Theme toggle */}
+        <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
+          {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+        </button>
       </div>
 
     </nav>
