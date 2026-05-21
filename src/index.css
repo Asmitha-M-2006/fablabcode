@@ -76,8 +76,8 @@
 [data-theme="dark"] .output-toggle-btn.active { color: #e6edf3; }
 [data-theme="dark"] .btn-ghost          { border-color: var(--border); color: var(--text-secondary); }
 [data-theme="dark"] .btn-ghost:hover    { background: rgba(99,102,241,.15); }
-[data-theme="dark"] .suggestion-chip   { background: #1c2128; border-color: var(--border); color: var(--text-secondary); }
-[data-theme="dark"] .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.12); }
+[data-theme="dark"] .suggestion-chip   { background: #21262d; border-color: #444c56; color: #cdd5de; }
+[data-theme="dark"] .suggestion-chip:hover { border-color: var(--accent); color: #a5b4fc; background: rgba(99,102,241,.15); }
 [data-theme="dark"] .home-card         { background: var(--bg-panel); border-color: var(--border); }
 [data-theme="dark"] .home-card:hover   { border-color: var(--accent); }
 [data-theme="dark"] .home-hero-badge   { background: rgba(99,102,241,.18); color: #a5b4fc; }
@@ -124,6 +124,71 @@
 [data-theme="dark"] .plan-title-row .plan-level-badge.lvl-high   { background: rgba(239,68,68,.15);  color: #fca5a5; }
 [data-theme="dark"] .gcode-3d-controls { background: rgba(0,0,0,.7); }
 [data-theme="dark"] .output-empty      { color: var(--text-muted); }
+
+/* ── Better contrast fixes ── */
+/* Timestamps inside chat bubbles */
+[data-theme="dark"] .bubble-time       { color: #6e7681; opacity: 1; }
+[data-theme="dark"] .chat-bubble.user .bubble-time { color: rgba(255,255,255,.55); }
+
+/* Chat input placeholder */
+[data-theme="dark"] .chat-textarea::placeholder { color: #4d5566; }
+[data-theme="dark"] .chat-textarea     { color: #cdd5de; }
+
+/* Panel headers / titles */
+[data-theme="dark"] .panel-title       { color: #cdd5de; }
+[data-theme="dark"] .panel-header      { border-color: var(--border); }
+
+/* Plan tab text */
+[data-theme="dark"] .plan-title        { color: #e6edf3; }
+[data-theme="dark"] .plan-summary      { color: #8b949e; border-color: var(--border); }
+[data-theme="dark"] .plan-section-title { color: #a5b4fc; }
+[data-theme="dark"] .plan-explanation-eyebrow { color: #a5b4fc; }
+[data-theme="dark"] .plan-explanation-text { color: #cdd5de; }
+
+/* Sandbox file tab */
+[data-theme="dark"] .sandbox-file-tab  { color: #8b949e; }
+[data-theme="dark"] .sandbox-file-tab:hover  { color: #a5b4fc; }
+[data-theme="dark"] .sandbox-file-tab.active { color: #a5b4fc; }
+[data-theme="dark"] .sandbox-lang-badge { background: rgba(99,102,241,.25); color: #a5b4fc; }
+[data-theme="dark"] .sandbox-filename  { color: #6e7681; }
+
+/* Viz section labels */
+[data-theme="dark"] .viz-section-label { color: #a5b4fc; }
+[data-theme="dark"] .viz-flow-text     { color: #cdd5de; }
+[data-theme="dark"] .viz-feature-text  { color: #8b949e; }
+[data-theme="dark"] .viz-gauge-label   { color: #8b949e; }
+[data-theme="dark"] .viz-gauge-val     { color: #cdd5de; }
+[data-theme="dark"] .viz-arch-filename { color: #cdd5de; }
+[data-theme="dark"] .viz-arch-lang-name { color: #6e7681; }
+[data-theme="dark"] .viz-concept-name  { color: inherit; }
+
+/* Tips section */
+[data-theme="dark"] .viz-tip-text      { color: #a5b4fc; }
+[data-theme="dark"] .viz-tips-block .viz-section-label { color: #a5b4fc; }
+
+/* G-code page */
+[data-theme="dark"] .page-h2           { color: #e6edf3; }
+[data-theme="dark"] .gcode-hint        { color: #8b949e; }
+[data-theme="dark"] .gcode-explanation { color: #8b949e; }
+[data-theme="dark"] .summary-key       { color: #6e7681; }
+[data-theme="dark"] .summary-val       { color: #cdd5de; }
+[data-theme="dark"] .gcode-title       { color: #8b949e; }
+
+/* History page */
+[data-theme="dark"] .history-count     { color: #6e7681; }
+[data-theme="dark"] .h-role            { color: #cdd5de; }
+[data-theme="dark"] .h-time            { color: #6e7681; }
+[data-theme="dark"] .history-empty     { color: #6e7681; }
+[data-theme="dark"] .page-info         { color: #6e7681; }
+
+/* Model bar */
+[data-theme="dark"] .model-bar         { background: #0d1117; border-color: var(--border); }
+
+/* Chat bubble AI text */
+[data-theme="dark"] .chat-bubble.ai .bubble-content p { color: #cdd5de; }
+
+/* Output panel header title truncation */
+[data-theme="dark"] .output-panel-header .panel-title { color: #cdd5de; }
 
 html { scroll-behavior: smooth; }
 body {
