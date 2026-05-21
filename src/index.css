@@ -933,15 +933,136 @@ body {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+/* ============================================================
+   RESPONSIVE — Tablet  (≤ 900px)
+   ============================================================ */
 @media (max-width: 900px) {
-  .sandbox-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; height: auto; overflow: auto; }
-  .gcode-page     { grid-template-columns: 1fr; overflow: auto; height: auto; }
+  /* ── Navbar ── */
   .nav-link span  { display: none; }
+  .navbar         { padding: 0 16px; }
+
+  /* ── Sandbox: stack chat above output ── */
+  .sandbox-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
+    overflow: auto;
+    padding: 12px;
+    gap: 12px;
+  }
+  .mode-section        { height: auto; overflow: visible; }
+  .chat-panel          { height: 52vh; min-height: 300px; max-height: 500px; }
+  .output-panel        { height: 62vh; min-height: 360px; }
+
+  /* ── G-code: stack inputs above viewer ── */
+  .gcode-page     { grid-template-columns: 1fr; overflow: auto; height: auto; }
+  .gcode-3d-wrap  { height: 320px; }
+
+  /* ── Visualizations ── */
   .viz-duo-grid   { grid-template-columns: 1fr; }
+  .viz-interact-header,
+  .viz-interact-row { grid-template-columns: 1fr 36px 1fr; gap: 6px; }
+
+  /* ── Home: 2-col feature cards ── */
+  .home-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* ── Output panel header ── */
+  .output-panel-header { flex-wrap: wrap; gap: 8px; }
+  .output-toggle-btn   { min-width: 60px; padding: 6px 10px; }
 }
+
+/* ============================================================
+   RESPONSIVE — Mobile  (≤ 600px)
+   ============================================================ */
 @media (max-width: 600px) {
-  .home-title { font-size: 36px; }
-  .navbar     { padding: 0 14px; }
+  /* ── Root vars ── */
+  :root { --nav-h: 56px; --model-bar-h: 48px; }
+
+  /* ── Navbar ── */
+  .navbar         { padding: 0 12px; }
+  .brand-name     { font-size: 16px; }
+  .nav-links      { gap: 1px; }
+  .nav-link       { padding: 6px 9px; font-size: 12px; }
+
+  /* ── Home page ── */
+  .home-page      { padding: 28px 16px 60px; }
+  .home-title     { font-size: 34px; letter-spacing: -1px; }
+  .home-sub       { font-size: 14px; }
+  .home-hero      { gap: 12px; }
+  .home-grid      { grid-template-columns: 1fr; gap: 12px; }
+  .home-card      { padding: 18px; }
+  .btn-hero       { padding: 11px 22px; font-size: 14px; }
+
+  /* ── Model bar ── */
+  .model-bar      { padding: 0 12px; gap: 6px; flex-wrap: wrap; height: auto; min-height: var(--model-bar-h); padding-top: 6px; padding-bottom: 6px; }
+  .model-selector-btn { padding: 5px 10px; font-size: 12px; }
+  .model-key-btn  { padding: 5px 10px; font-size: 12px; }
+
+  /* ── Sandbox layout ── */
+  .sandbox-layout { padding: 10px; gap: 10px; }
+  .chat-panel     { height: 45vh; min-height: 280px; }
+  .output-panel   { height: 65vh; min-height: 400px; }
+
+  /* ── Chat panel ── */
+  .chat-messages  { padding: 10px; gap: 8px; }
+  .bubble-content { max-width: 92%; font-size: 13px; padding: 9px 12px; }
+  .chat-suggestions { gap: 4px; }
+  .suggestion-chip  { font-size: 11px; padding: 3px 8px; }
+  .chat-textarea    { font-size: 13px; }
+
+  /* ── Output panel ── */
+  .output-panel-header {
+    padding: 8px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .panel-title         { font-size: 12px; min-width: 0; flex-shrink: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 120px; }
+  .output-toggle       { flex-shrink: 0; }
+  .output-toggle-btn   { min-width: 0; padding: 5px 8px; font-size: 11px; }
+  .output-toggle-slider { transition: none; }
+  .output-header-actions { gap: 4px; flex-shrink: 0; }
+  .btn-ghost.btn-sm    { padding: 4px 8px; font-size: 11px; }
+  /* hide Export label on mobile, keep icon */
+  .btn-export span     { display: none; }
+
+  /* ── Sandbox file tabs ── */
+  .sandbox-file-tabs { padding: 5px 10px 0; }
+  .sandbox-file-tab  { font-size: 11.5px; padding: 5px 10px; }
+
+  /* ── Plan tab ── */
+  .plan-pane      { padding: 14px 14px; gap: 16px; }
+  .plan-title     { font-size: 15px; }
+  .plan-summary   { font-size: 13px; }
+
+  /* ── Viz ── */
+  .viz-duo-grid   { grid-template-columns: 1fr; gap: 10px; }
+  .viz-interact-header,
+  .viz-interact-row { grid-template-columns: 1fr 28px 1fr; gap: 4px; font-size: 11px; }
+  .viz-interact-cell { padding: 7px 8px; font-size: 11px; }
+  .viz-concept-chip  { font-size: 11px; padding: 5px 10px; }
+  .viz-feature-card  { font-size: 11.5px; }
+  .viz-trace-step    { padding: 7px 10px; }
+  .viz-trace-step-text { font-size: 11px; }
+  .viz-io-row        { grid-template-columns: 1fr; gap: 8px; }
+
+  /* ── G-code page ── */
+  .gcode-page     { padding: 14px 14px; gap: 12px; }
+  .gcode-3d-wrap  { height: 260px; }
+  .gcode-settings { grid-template-columns: 1fr 1fr; }
+  .example-chips  { gap: 4px; }
+  .ex-chip        { font-size: 11.5px; padding: 4px 9px; }
+
+  /* ── History page ── */
+  .history-page   { padding: 16px 14px 48px; }
+  .history-header { flex-wrap: wrap; gap: 8px; }
+
+  /* ── Pagination ── */
+  .pagination     { gap: 4px; padding: 14px 0; }
+  .page-btn       { padding: 6px 10px; font-size: 12px; }
+  .page-num       { width: 30px; height: 30px; font-size: 12px; }
+
+  /* ── Toast ── */
+  .toast { font-size: 12px; padding: 8px 18px; max-width: 90vw; text-align: center; }
 }
 
 /* ============================================================
