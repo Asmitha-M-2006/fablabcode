@@ -1,12 +1,18 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/chat.mjs":            { "maxDuration": 90 },
+    "api/chat/history.mjs":    { "maxDuration": 15 },
+    "api/gcode/generate.mjs":  { "maxDuration": 15 },
+    "api/health.mjs":          { "maxDuration": 10 }
+  },
   "rewrites": [
-    { "source": "/api/health",         "destination": "/api/health.mjs"  },
-    { "source": "/api/chat",           "destination": "/api/chat.mjs"    },
-    { "source": "/api/chat/history",   "destination": "/api/chat.mjs"    },
-    { "source": "/api/models",         "destination": "/api/chat.mjs"    },
-    { "source": "/api/gcode/generate", "destination": "/api/chat.mjs"    },
-    { "source": "/(.*)",               "destination": "/index.html"      }
+    { "source": "/api/health",         "destination": "/api/health.mjs"          },
+    { "source": "/api/chat",           "destination": "/api/chat.mjs"            },
+    { "source": "/api/chat/history",   "destination": "/api/chat/history.mjs"    },
+    { "source": "/api/models",         "destination": "/api/chat.mjs"            },
+    { "source": "/api/gcode/generate", "destination": "/api/gcode/generate.mjs"  },
+    { "source": "/(.*)",               "destination": "/index.html"              }
   ]
 }
