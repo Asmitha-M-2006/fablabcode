@@ -158,7 +158,7 @@ function SandboxMode({ showToast }) {
 
       // If the AI timed out and the server fell back to templates, warn the user
       if (payload.meta?.provider === 'fallback' && payload.meta?.fallbackReason) {
-        showToast('⚠️ AI timed out — showing template. Try a simpler prompt or switch model.');
+        showToast(`⚠️ AI fallback: ${payload.meta.fallbackReason}`);
       }
 
       // Add the AI's reply as a chat bubble
@@ -168,6 +168,7 @@ function SandboxMode({ showToast }) {
         createdAt: payload.meta?.generatedAt || new Date().toISOString(),
         // Mark bubble as fallback so ChatPanel can show a warning label
         isFallback: payload.meta?.provider === 'fallback' && !!payload.meta?.fallbackReason,
+        fallbackReason: payload.meta?.fallbackReason,
       }]);
 
       // If the AI returned a code artifact, update the Output panel

@@ -134,7 +134,7 @@ function ChatPanel({ messages, sendMessage, clearChat, isBusy }) {
               {/* Fallback warning — shown when AI timed out and a template was used */}
               {msg.isFallback && (
                 <span className="fallback-badge">
-                  ⚠️ AI timed out — template used. Try a simpler prompt or switch model.
+                  ⚠️ {msg.fallbackReason || 'AI timed out — template used. Try a simpler prompt or switch model.'}
                 </span>
               )}
 
